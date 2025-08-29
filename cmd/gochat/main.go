@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/ananthvk/gochat/internal"
+	"github.com/go-chi/chi/v5"
 	"github.com/joho/godotenv"
 )
 
-func homePageHandler(w http.ResponseWriter, r *http.Request) {
+func handlerHomePage(w http.ResponseWriter, r *http.Request) {
 	log.Printf("GET /")
 	fmt.Fprintf(w, "%s", "Hello there")
 }
@@ -26,12 +28,13 @@ func main() {
 		port = "8000"
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", homePageHandler)
+	router := chi.NewRouter()
+	router.HandleFunc("/", handlerHomePage)
+	router.Mount("/api/v1/", internal.Routes())
 
 	server := &http.Server{
 		Addr:    host + ":" + port,
-		Handler: mux,
+		Handler: router,
 	}
 
 	log.Printf("Server listening on %s", server.Addr)
