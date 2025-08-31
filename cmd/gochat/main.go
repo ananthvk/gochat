@@ -8,6 +8,7 @@ import (
 
 	"github.com/ananthvk/gochat/internal"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -29,6 +30,11 @@ func main() {
 	}
 
 	router := chi.NewRouter()
+	router.Use(middleware.RequestID)
+	router.Use(middleware.RealIP)
+	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+
 	router.HandleFunc("/", handlerHomePage)
 	router.Mount("/api/v1/", internal.Routes())
 

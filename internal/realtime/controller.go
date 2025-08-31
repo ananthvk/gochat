@@ -10,7 +10,7 @@ import (
 
 func Routes() chi.Router {
 	realtimeRouter := chi.NewRouter()
-	realtimeRouter.HandleFunc("/ws", handlerCreateWSConnection)
+	realtimeRouter.Get("/ws", handlerCreateWSConnection)
 	return realtimeRouter
 }
 
