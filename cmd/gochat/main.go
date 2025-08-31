@@ -1,22 +1,18 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/ananthvk/gochat/internal"
 	"github.com/ananthvk/gochat/internal/logging"
+	"github.com/ananthvk/gochat/internal/realtime"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/traceid"
 	"github.com/joho/godotenv"
 )
-
-func handlerHomePage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "%s", "API root url")
-}
 
 func main() {
 	godotenv.Load()
@@ -53,13 +49,17 @@ func main() {
 
 	router.Use(middleware.Heartbeat("/ping"))
 
-	router.HandleFunc("/", handlerHomePage)
+	fs := http.FileServer(http.Dir("./static"))
+	router.Handle("/", fs)
+
 	router.Mount("/api/v1/", internal.Routes())
 
 	server := &http.Server{
 		Addr:    host + ":" + port,
 		Handler: router,
 	}
+
+	go realtime.DefaultHub.RunEventLoop()
 
 	slog.Info("server listening", "address", server.Addr)
 	slog.Error("server quit", "error", server.ListenAndServe())

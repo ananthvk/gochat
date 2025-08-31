@@ -13,6 +13,8 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+var DefaultHub = NewHub()
+
 func Routes() chi.Router {
 	realtimeRouter := chi.NewRouter()
 	realtimeRouter.Get("/ws", handlerCreateWSConnection)
@@ -20,22 +22,17 @@ func Routes() chi.Router {
 }
 
 func handlerCreateWSConnection(w http.ResponseWriter, r *http.Request) {
-	slog.InfoContext(r.Context(), "websocket connection establishment", "step", "begin")
 
 	// TODO: Fix this to check origin correctly, also install and use cors package
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
-	ws, err := upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(w, r, nil)
+
 	if err != nil {
-		slog.ErrorContext(r.Context(), "websocket connection establishment", "step", "upgrade", "error", err)
+		slog.ErrorContext(r.Context(), "websocket upgrade failed", "error", err)
 		return
 	}
 
-	err = ws.WriteMessage(1, []byte("Hello from server"))
-	if err != nil {
-		slog.ErrorContext(r.Context(), "websocket connection establishment", "step", "hello", "error", err)
-		return
-	}
-
-	slog.InfoContext(r.Context(), "websocket connection establishment", "step", "finished")
+	client_id := DefaultHub.AddConnection(conn)
+	slog.InfoContext(r.Context(), "websocket connection established", "address", conn.RemoteAddr(), "clientId", client_id)
 }
