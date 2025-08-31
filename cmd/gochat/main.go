@@ -2,19 +2,20 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
 	"github.com/ananthvk/gochat/internal"
+	"github.com/ananthvk/gochat/internal/logging"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/traceid"
 	"github.com/joho/godotenv"
 )
 
 func handlerHomePage(w http.ResponseWriter, r *http.Request) {
-	log.Printf("GET /")
-	fmt.Fprintf(w, "%s", "Hello there")
+	fmt.Fprintf(w, "%s", "API root url")
 }
 
 func main() {
@@ -29,11 +30,28 @@ func main() {
 		port = "8000"
 	}
 
+	// Set default logger to httplog
+	logger, requestLoggerMiddleware := logging.CreateLoggerAndRequestLoggerMiddleware()
+	if k := os.Getenv("ENV"); k != "localhost" {
+		logger = logger.With(
+			slog.String("app", "gochat"),
+			// TODO: Get the version number and running environment automatically
+			slog.String("version", "v0.0.1"),
+			slog.String("env", "production"),
+		)
+	}
+	slog.SetDefault(logger)
+	slog.SetLogLoggerLevel(slog.LevelError)
+
 	router := chi.NewRouter()
+
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
-	router.Use(middleware.Logger)
+	router.Use(traceid.Middleware)
 	router.Use(middleware.Recoverer)
+	router.Use(requestLoggerMiddleware)
+
+	router.Use(middleware.Heartbeat("/ping"))
 
 	router.HandleFunc("/", handlerHomePage)
 	router.Mount("/api/v1/", internal.Routes())
@@ -43,6 +61,6 @@ func main() {
 		Handler: router,
 	}
 
-	log.Printf("Server listening on %s", server.Addr)
-	log.Fatal(server.ListenAndServe())
+	slog.Info("server listening", "address", server.Addr)
+	slog.Error("server quit", "error", server.ListenAndServe())
 }
