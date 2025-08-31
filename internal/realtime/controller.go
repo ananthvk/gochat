@@ -20,22 +20,22 @@ func Routes() chi.Router {
 }
 
 func handlerCreateWSConnection(w http.ResponseWriter, r *http.Request) {
-	slog.Info("websocket connection establishment", "step", "begin")
+	slog.InfoContext(r.Context(), "websocket connection establishment", "step", "begin")
 
 	// TODO: Fix this to check origin correctly, also install and use cors package
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		slog.Error("websocket connection establishment", "step", "upgrade", "error", err)
+		slog.ErrorContext(r.Context(), "websocket connection establishment", "step", "upgrade", "error", err)
 		return
 	}
 
 	err = ws.WriteMessage(1, []byte("Hello from server"))
 	if err != nil {
-		slog.Error("websocket connection establishment", "step", "hello", "error", err)
+		slog.ErrorContext(r.Context(), "websocket connection establishment", "step", "hello", "error", err)
 		return
 	}
 
-	slog.Info("websocket connection establishment", "step", "finished")
+	slog.InfoContext(r.Context(), "websocket connection establishment", "step", "finished")
 }
