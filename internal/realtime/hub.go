@@ -50,7 +50,7 @@ func (h *hub) RunEventLoop() {
 						slog.Warn("client outgoing channel full, dropping message", "from", e.Client.ID, "to", client.ID, "size", len(e.Data))
 					}
 				}
-				slog.Info("processed data event", "size", len(e.Data), "payload", string(e.Data))
+				slog.Info("processed data event", "size", len(e.Data), "clientId", e.Client.ID)
 			default:
 				slog.Error("internal error", "reason", "unknown event")
 				panic("unknown event")

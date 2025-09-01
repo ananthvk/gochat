@@ -11,6 +11,21 @@ import (
 // Maximum number of events that can remain unsent
 const maxClientOutgoingSize = 100
 
+const (
+	// Maximum time allowed to write message to client
+	maxWriteWait = 15 * time.Second
+
+	// Duration of time the server waits for a PONG reply
+	pongWait = 60 * time.Second
+
+	// pingInterval defines how often ping messages are sent to clients
+	// It has to be sent before the pong timeout
+	pingInterval = (pongWait * 9) / 10
+
+	// Maximum size of a message in bytes
+	maxMessageSize = 4096
+)
+
 // client represents a websocket connection to the server.
 // It stores additional fields such as ConnectedAt,
 // and an UUID to uniquely identify this connection
@@ -47,6 +62,12 @@ func (c *client) ReaderLoop() {
 		slog.Info("closed websocket", "clientId", c.ID)
 	}()
 
+	c.Connection.SetReadLimit(maxMessageSize)
+	c.Connection.SetReadDeadline(time.Now().Add(pongWait))
+	// On receivng a pong message, extend the read deadline
+	// This helps remove dead clients, i.e. if a client does not respond to a ping sent within the wait time, the read times out
+	c.Connection.SetPongHandler(func(string) error { c.Connection.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+
 	for {
 		messageType, p, err := c.Connection.ReadMessage()
 		if err != nil {
@@ -70,26 +91,38 @@ func (c *client) ReaderLoop() {
 // WriterLoop must be run in a separate goroutine. This function runs until the connection is terminated.
 // It waits for outgoing messages (in the Outgoing channel) and sends them to the client
 func (c *client) WriterLoop() {
-	// TODO: Send ping messages to detect dead clients
 	// TODO: Optimization: Group multiple messages into a single message
+	ticker := time.NewTicker(pingInterval)
+
 	defer func() {
+		ticker.Stop()
 		c.Connection.Close()
 	}()
 
 	for {
-		message, ok := <-c.Outgoing
-		if !ok {
-			// The hub has removed the client, send a close message
-			c.Connection.WriteMessage(websocket.CloseMessage, []byte{})
-			slog.Info("sent close message", "clientId", c.ID)
-		}
-		err := c.Connection.WriteMessage(websocket.TextMessage, message)
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				slog.Error("message delivery failed", "clientId", c.ID, "size", len(message), "error", err)
+		select {
+		case message, ok := <-c.Outgoing:
+			c.Connection.SetWriteDeadline(time.Now().Add(maxWriteWait))
+			if !ok {
+				// The hub has removed the client, send a close message
+				c.Connection.WriteMessage(websocket.CloseMessage, []byte{})
+				slog.Info("sent close message", "clientId", c.ID)
 			}
-			return
+			err := c.Connection.WriteMessage(websocket.TextMessage, message)
+			if err != nil {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					slog.Error("message delivery failed", "clientId", c.ID, "size", len(message), "error", err)
+				}
+				return
+			}
+			slog.Info("message delivery successful", "clientId", c.ID, "size", len(message))
+		case <-ticker.C:
+			c.Connection.SetWriteDeadline(time.Now().Add(maxWriteWait))
+			err := c.Connection.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
+				slog.Info("ping message to client failed", "clientId", c.ID)
+				return
+			}
 		}
-		slog.Info("message delivery successful", "clientId", c.ID, "size", len(message))
 	}
 }
