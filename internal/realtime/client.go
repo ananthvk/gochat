@@ -66,3 +66,30 @@ func (c *Client) ReaderLoop() {
 		}
 	}
 }
+
+// WriterLoop must be run in a separate goroutine. This function runs until the connection is terminated.
+// It waits for outgoing messages (in the Outgoing channel) and sends them to the client
+func (c *Client) WriterLoop() {
+	// TODO: Send ping messages to detect dead clients
+	// TODO: Optimization: Group multiple messages into a single message
+	defer func() {
+		c.Connection.Close()
+	}()
+
+	for {
+		message, ok := <-c.Outgoing
+		if !ok {
+			// The hub has removed the client, send a close message
+			c.Connection.WriteMessage(websocket.CloseMessage, []byte{})
+			slog.Info("sent close message", "clientId", c.ID)
+		}
+		err := c.Connection.WriteMessage(websocket.TextMessage, message)
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				slog.Error("message delivery failed", "clientId", c.ID, "size", len(message), "error", err)
+			}
+			return
+		}
+		slog.Info("message delivery successful", "clientId", c.ID, "size", len(message))
+	}
+}

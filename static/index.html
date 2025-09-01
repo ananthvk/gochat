@@ -43,10 +43,14 @@
             console.log("Sending text ", txtbox.value)
             if (txtbox.value) {
                 socket.send(txtbox.value)
+                let newNode = document.createElement("p")
+                newNode.textContent = txtbox.value
+                document.getElementById("messages").appendChild(newNode)
                 txtbox.value = "";
             }
         }
 
     </script>
 </body>
+
 </html>

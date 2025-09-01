@@ -38,6 +38,18 @@ func (h *Hub) RunEventLoop() {
 		case event := <-h.Events:
 			switch e := event.(type) {
 			case DataEvent:
+				// For now, send the message to all connected clients
+				for _, client := range h.Clients {
+					if client.ID == e.Client.ID {
+						continue
+					}
+					select {
+					case client.Outgoing <- e.Data:
+						slog.Info("sent data", "from", e.Client.ID, "to", client.ID, "size", len(e.Data))
+					default:
+						slog.Warn("client outgoing channel full, dropping message", "from", e.Client.ID, "to", client.ID, "size", len(e.Data))
+					}
+				}
 				slog.Info("processed data event", "size", len(e.Data), "payload", string(e.Data))
 			default:
 				slog.Error("internal error", "reason", "unknown event")
@@ -48,6 +60,7 @@ func (h *Hub) RunEventLoop() {
 			case RegisterConnectionEvent:
 				h.Clients[e.Client.ID] = e.Client
 				go e.Client.ReaderLoop()
+				go e.Client.WriterLoop()
 				slog.Info("processed register event", "clientId", e.Client.ID)
 			case UnregisterConnectionEvent:
 				// Check if the client is active
