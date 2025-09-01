@@ -16,22 +16,47 @@ const maxEventsHub = 100
 type Hub struct {
 	Clients map[uuid.UUID]*Client
 	Events  chan []byte
+	Control chan Event
 }
 
 func NewHub() *Hub {
 	return &Hub{
 		Clients: make(map[uuid.UUID]*Client),
 		Events:  make(chan []byte, maxEventsHub),
+		Control: make(chan Event),
 	}
 }
 
 // RunEventLoop starts the event loop of the Hub. Note: This function must be called in a separate goroutine.
 // It waits on events channel, and processes the events it received from the clients.
+// TODO: NOTE: Since both kind of events (control, and data events) are multiplexed and processed in the same goroutine,
+// it may lead to starvation. Research/Identify some method to prevent starvation.
 func (h *Hub) RunEventLoop() {
 	slog.Info("started hub event loop")
 	for {
-		event := <-h.Events
-		slog.Info("processed event", "size", len(event), "event", string(event))
+		select {
+		case event := <-h.Events:
+			slog.Info("processed event", "size", len(event), "event", string(event))
+		case event := <-h.Control:
+			switch e := event.(type) {
+			case RegisterConnectionEvent:
+				h.Clients[e.Client.ID] = e.Client
+				go e.Client.ReaderLoop()
+				slog.Info("processed register event", "clientId", e.Client.ID)
+			case UnregisterConnectionEvent:
+				// Check if the client is active
+				if _, ok := h.Clients[e.Client.ID]; ok {
+					delete(h.Clients, e.Client.ID)
+					close(e.Client.Outgoing)
+					slog.Info("processed unregister event", "clientId", e.Client.ID)
+				} else {
+					slog.Warn("unregister failed", "clientId", e.Client.ID, "reason", "client with specified id does not exist")
+				}
+			default:
+				slog.Error("internal error", "reason", "unknown event type")
+				panic("unknown event type")
+			}
+		}
 	}
 }
 
@@ -39,7 +64,6 @@ func (h *Hub) RunEventLoop() {
 // It also starts the Reader and Writer loop as two goroutines for the connection
 func (h *Hub) AddConnection(connection *websocket.Conn) uuid.UUID {
 	client := NewClient(connection, h)
-	h.Clients[client.ID] = client
-	go client.ReaderLoop()
+	h.Control <- RegisterConnectionEvent{Client: client}
 	return client.ID
 }

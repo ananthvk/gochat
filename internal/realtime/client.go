@@ -38,16 +38,26 @@ func NewClient(connection *websocket.Conn, hub *Hub) *Client {
 // ReaderLoop must be run in a separate goroutine. This function runs until the connection is terminated.
 // It reads events from the client, and passes those events to the Hub for further processing
 func (c *Client) ReaderLoop() {
+	defer func() {
+		c.Hub.Control <- UnregisterConnectionEvent{Client: c}
+		err := c.Connection.Close()
+		if err != nil {
+			slog.Error("error while closing websocket", "error", err)
+		}
+		slog.Info("closed websocket", "clientId", c.ID)
+	}()
+
 	for {
 		messageType, p, err := c.Connection.ReadMessage()
 		if err != nil {
-			slog.Error("websocket read failed", "clientId", c.ID, "error", err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				slog.Error("websocket read failed", "clientId", c.ID, "error", err)
+			}
 			return
 		}
 
 		// Send the event to the hub for further processing
 		// If the Hub Events is full, drop the message, so that the client retransmits it again
-
 		select {
 		case c.Hub.Events <- p:
 			slog.Info("message enqueued to hub", "clientId", c.ID, "messageType", messageType, "size", len(p))
