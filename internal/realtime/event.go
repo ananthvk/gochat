@@ -1,17 +1,16 @@
 package realtime
 
-type Event interface {
+type event any
+
+type registerConnectionEvent struct {
+	Client *client
 }
 
-type RegisterConnectionEvent struct {
-	Client *Client
+type unregisterConnectionEvent struct {
+	Client *client
 }
 
-type UnregisterConnectionEvent struct {
-	Client *Client
-}
-
-type DataEvent struct {
-	Client *Client
+type dataEvent struct {
+	Client *client
 	Data   []byte
 }

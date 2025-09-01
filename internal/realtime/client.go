@@ -11,22 +11,22 @@ import (
 // Maximum number of events that can remain unsent
 const maxClientOutgoingSize = 100
 
-// Client represents a websocket connection to the server.
+// client represents a websocket connection to the server.
 // It stores additional fields such as ConnectedAt,
 // and an UUID to uniquely identify this connection
 // Outgoing is a buffered channel, and is used by the Hub to send Events to client
-type Client struct {
+type client struct {
 	ID          uuid.UUID
 	Connection  *websocket.Conn
 	ConnectedAt time.Time
 	Outgoing    chan []byte
-	Hub         *Hub
+	Hub         *hub
 }
 
-// NewClient creates a client from the passed websocket connection.
+// newClient creates a client from the passed websocket connection.
 // It sets an unique ID to this connection, and creates the outgoing channel
-func NewClient(connection *websocket.Conn, hub *Hub) *Client {
-	return &Client{
+func newClient(connection *websocket.Conn, hub *hub) *client {
+	return &client{
 		ID:          uuid.New(),
 		Connection:  connection,
 		ConnectedAt: time.Now().UTC(),
@@ -37,9 +37,9 @@ func NewClient(connection *websocket.Conn, hub *Hub) *Client {
 
 // ReaderLoop must be run in a separate goroutine. This function runs until the connection is terminated.
 // It reads events from the client, and passes those events to the Hub for further processing
-func (c *Client) ReaderLoop() {
+func (c *client) ReaderLoop() {
 	defer func() {
-		c.Hub.Control <- UnregisterConnectionEvent{Client: c}
+		c.Hub.control <- unregisterConnectionEvent{Client: c}
 		err := c.Connection.Close()
 		if err != nil {
 			slog.Error("error while closing websocket", "error", err)
@@ -59,7 +59,7 @@ func (c *Client) ReaderLoop() {
 		// Send the event to the hub for further processing
 		// If the Hub Events is full, drop the message, so that the client retransmits it again
 		select {
-		case c.Hub.Events <- DataEvent{Client: c, Data: p}:
+		case c.Hub.events <- dataEvent{Client: c, Data: p}:
 			slog.Info("message enqueued to hub", "clientId", c.ID, "messageType", messageType, "size", len(p))
 		default:
 			slog.Warn("hub events channel full, dropped message", "clientId", c.ID, "messageType", messageType, "size", len(p))
@@ -69,7 +69,7 @@ func (c *Client) ReaderLoop() {
 
 // WriterLoop must be run in a separate goroutine. This function runs until the connection is terminated.
 // It waits for outgoing messages (in the Outgoing channel) and sends them to the client
-func (c *Client) WriterLoop() {
+func (c *client) WriterLoop() {
 	// TODO: Send ping messages to detect dead clients
 	// TODO: Optimization: Group multiple messages into a single message
 	defer func() {

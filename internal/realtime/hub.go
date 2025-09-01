@@ -11,19 +11,19 @@ const maxEventsHub = 100
 
 // TODO: For now Hub contains all the clients, rooms have not yet been implemented
 
-// Hub manages a set of websocket connections
+// hub manages a set of websocket connections
 // It handles passing of events between clients and the rest of the system
-type Hub struct {
-	Clients map[uuid.UUID]*Client
-	Events  chan Event
-	Control chan Event
+type hub struct {
+	clients map[uuid.UUID]*client
+	events  chan event
+	control chan event
 }
 
-func NewHub() *Hub {
-	return &Hub{
-		Clients: make(map[uuid.UUID]*Client),
-		Events:  make(chan Event, maxEventsHub),
-		Control: make(chan Event),
+func newHub() *hub {
+	return &hub{
+		clients: make(map[uuid.UUID]*client),
+		events:  make(chan event, maxEventsHub),
+		control: make(chan event),
 	}
 }
 
@@ -31,15 +31,15 @@ func NewHub() *Hub {
 // It waits on events channel, and processes the events it received from the clients.
 // TODO: NOTE: Since both kind of events (control, and data events) are multiplexed and processed in the same goroutine,
 // it may lead to starvation. Research/Identify some method to prevent starvation.
-func (h *Hub) RunEventLoop() {
+func (h *hub) RunEventLoop() {
 	slog.Info("started hub event loop")
 	for {
 		select {
-		case event := <-h.Events:
+		case event := <-h.events:
 			switch e := event.(type) {
-			case DataEvent:
+			case dataEvent:
 				// For now, send the message to all connected clients
-				for _, client := range h.Clients {
+				for _, client := range h.clients {
 					if client.ID == e.Client.ID {
 						continue
 					}
@@ -55,17 +55,17 @@ func (h *Hub) RunEventLoop() {
 				slog.Error("internal error", "reason", "unknown event")
 				panic("unknown event")
 			}
-		case event := <-h.Control:
+		case event := <-h.control:
 			switch e := event.(type) {
-			case RegisterConnectionEvent:
-				h.Clients[e.Client.ID] = e.Client
+			case registerConnectionEvent:
+				h.clients[e.Client.ID] = e.Client
 				go e.Client.ReaderLoop()
 				go e.Client.WriterLoop()
 				slog.Info("processed register event", "clientId", e.Client.ID)
-			case UnregisterConnectionEvent:
+			case unregisterConnectionEvent:
 				// Check if the client is active
-				if _, ok := h.Clients[e.Client.ID]; ok {
-					delete(h.Clients, e.Client.ID)
+				if _, ok := h.clients[e.Client.ID]; ok {
+					delete(h.clients, e.Client.ID)
 					close(e.Client.Outgoing)
 					slog.Info("processed unregister event", "clientId", e.Client.ID)
 				} else {
@@ -79,10 +79,10 @@ func (h *Hub) RunEventLoop() {
 	}
 }
 
-// AddConnection adds the websocket connection to the hub and returns the client ID.
+// addConnection adds the websocket connection to the hub and returns the client ID.
 // It also starts the Reader and Writer loop as two goroutines for the connection
-func (h *Hub) AddConnection(connection *websocket.Conn) uuid.UUID {
-	client := NewClient(connection, h)
-	h.Control <- RegisterConnectionEvent{Client: client}
+func (h *hub) addConnection(connection *websocket.Conn) uuid.UUID {
+	client := newClient(connection, h)
+	h.control <- registerConnectionEvent{Client: client}
 	return client.ID
 }

@@ -13,7 +13,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-var DefaultHub = NewHub()
+var DefaultHub = newHub()
 
 func Routes() chi.Router {
 	realtimeRouter := chi.NewRouter()
@@ -33,6 +33,6 @@ func handlerCreateWSConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client_id := DefaultHub.AddConnection(conn)
+	client_id := DefaultHub.addConnection(conn)
 	slog.InfoContext(r.Context(), "websocket connection established", "address", conn.RemoteAddr(), "clientId", client_id)
 }
