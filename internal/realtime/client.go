@@ -107,10 +107,11 @@ func (c *client) WriterLoop() {
 				// The hub has removed the client, send a close message
 				c.Connection.WriteMessage(websocket.CloseMessage, []byte{})
 				slog.Info("sent close message", "clientId", c.ID)
+				return
 			}
 			err := c.Connection.WriteMessage(websocket.TextMessage, message)
 			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 					slog.Error("message delivery failed", "clientId", c.ID, "size", len(message), "error", err)
 				}
 				return

@@ -15,7 +15,7 @@
         <h1>Messages</h1>
     </div>
     <script>
-        let socket = new WebSocket("ws://127.0.0.1:8000/api/v1/realtime/ws");
+        let socket = new WebSocket("ws://192.168.1.199:8000/api/v1/realtime/ws");
 
         socket.onopen = () => {
             console.log("Connection established");
@@ -31,7 +31,8 @@
 
         socket.onmessage = event => {
             let text = event.data;
-            console.log("GOT MESAGE FROM SERVER", event)
+            console.log(text)
+            console.log("GOT MESSAGE FROM SERVER", event)
             let newNode = document.createElement("p")
             newNode.textContent = text
             document.getElementById("messages").appendChild(newNode)
