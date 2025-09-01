@@ -11,7 +11,7 @@ type UnregisterConnectionEvent struct {
 	Client *Client
 }
 
-/*
 type DataEvent struct {
+	Client *Client
+	Data   []byte
 }
-*/

@@ -59,7 +59,7 @@ func (c *Client) ReaderLoop() {
 		// Send the event to the hub for further processing
 		// If the Hub Events is full, drop the message, so that the client retransmits it again
 		select {
-		case c.Hub.Events <- p:
+		case c.Hub.Events <- DataEvent{Client: c, Data: p}:
 			slog.Info("message enqueued to hub", "clientId", c.ID, "messageType", messageType, "size", len(p))
 		default:
 			slog.Warn("hub events channel full, dropped message", "clientId", c.ID, "messageType", messageType, "size", len(p))

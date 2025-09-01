@@ -15,14 +15,14 @@ const maxEventsHub = 100
 // It handles passing of events between clients and the rest of the system
 type Hub struct {
 	Clients map[uuid.UUID]*Client
-	Events  chan []byte
+	Events  chan Event
 	Control chan Event
 }
 
 func NewHub() *Hub {
 	return &Hub{
 		Clients: make(map[uuid.UUID]*Client),
-		Events:  make(chan []byte, maxEventsHub),
+		Events:  make(chan Event, maxEventsHub),
 		Control: make(chan Event),
 	}
 }
@@ -36,7 +36,13 @@ func (h *Hub) RunEventLoop() {
 	for {
 		select {
 		case event := <-h.Events:
-			slog.Info("processed event", "size", len(event), "event", string(event))
+			switch e := event.(type) {
+			case DataEvent:
+				slog.Info("processed data event", "size", len(e.Data), "payload", string(e.Data))
+			default:
+				slog.Error("internal error", "reason", "unknown event")
+				panic("unknown event")
+			}
 		case event := <-h.Control:
 			switch e := event.(type) {
 			case RegisterConnectionEvent:
@@ -53,8 +59,8 @@ func (h *Hub) RunEventLoop() {
 					slog.Warn("unregister failed", "clientId", e.Client.ID, "reason", "client with specified id does not exist")
 				}
 			default:
-				slog.Error("internal error", "reason", "unknown event type")
-				panic("unknown event type")
+				slog.Error("internal error", "reason", "unknown control event")
+				panic("unknown control event")
 			}
 		}
 	}
