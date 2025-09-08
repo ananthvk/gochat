@@ -25,6 +25,13 @@ document.addEventListener("DOMContentLoaded", function (event) {
         newNode.textContent = text
 
         document.getElementById("messages").appendChild(newNode)
+
+        // TODO: Only scroll when the user is already at the end of the div, i.e. don't scroll if the user is reading a message up
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.scrollTo({
+            top: messagesDiv.scrollHeight,
+            behavior: 'smooth'
+        });
     }
 
     document.getElementById("message-form").addEventListener("submit", function (e) {
@@ -46,5 +53,11 @@ function sendmessage() {
         document.getElementById("messages").appendChild(newNode)
 
         messageInput.value = "";
+
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.scrollTo({
+            top: messagesDiv.scrollHeight,
+            behavior: 'smooth'
+        });
     }
 }

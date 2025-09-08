@@ -10,12 +10,14 @@ body {
 
 .sidebar {
     width: 20%;
+    background-color: rgba(79, 93, 117, 0.5);
 }
 
 .chatbox {
     width: 80%;
     display: flex;
     flex-direction: column;
+    background-color: rgba(79, 93, 117, 0.02);
 }
 
 
@@ -27,6 +29,12 @@ body {
     border-radius: 1em;
     margin-left: 2em;
     margin-right: 2em;
+    background-color: rgba(207, 192, 189, 0.1);
+    transition: 0.5s;
+}
+
+.message-input-form:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .message-input {
@@ -46,6 +54,20 @@ body {
     height: 40px;
     border: 0;
     outline: none;
+    color: rgba(13, 92, 99, 0.9);
+    background-color: rgba(36, 123, 123, 0.1);
+    transition: 0.3s;
+}
+
+.message-send-btn:hover {
+    background-color: rgba(36, 123, 123, 0.3);
+    color: rgba(13, 92, 99, 1.0);
+    font-weight: 800;
+}
+
+.message-send-btn:active {
+    background-color: rgba(36, 123, 123, 0.8);
+    color: rgba(13, 92, 99, 1.0);
 }
 
 .main-container {
@@ -72,10 +94,12 @@ body {
 
 .message-self {
     align-self: flex-end;
+    background-color: rgba(134, 203, 146, 0.4);
 }
 
 .message-other {
     align-self: flex-start;
+    background-color: rgba(207, 192, 189, 0.4);
 }
 
 /**
@@ -85,7 +109,7 @@ Style the scrollbar
     overflow-y: scroll;
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
-    scrollbar-color: white transparent;
+    scrollbar-color: lightgray transparent;
 }
 
 .messages::-webkit-scrollbar {
@@ -98,7 +122,7 @@ Style the scrollbar
 }
 
 .messages::-webkit-scrollbar-thumb {
-    background-color: white;
+    background-color: lightgray;
     border-radius: 12px;
     border: 2px solid transparent;
     transition: background-color 0.3s ease;
@@ -113,6 +137,7 @@ Style the scrollbar
  * Colors to identify positions for debugging
 */
 
+/*
 .sidebar {
     background-color: gray;
 }
@@ -152,3 +177,4 @@ Style the scrollbar
 .message-other {
     background-color: whitesmoke;
 }
+*/
