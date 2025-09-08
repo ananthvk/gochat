@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"mime"
 	"net/http"
 	"os"
 
@@ -49,10 +50,13 @@ func main() {
 
 	router.Use(middleware.Heartbeat("/ping"))
 
-	fs := http.FileServer(http.Dir("./static"))
-	router.Handle("/", fs)
+	mime.AddExtensionType(".js", "application/javascript")
+	mime.AddExtensionType(".css", "text/css")
 
 	router.Mount("/api/v1/", internal.Routes())
+
+	fs := http.FileServer(http.Dir("./static"))
+	router.Handle("/*", fs)
 
 	server := &http.Server{
 		Addr:    host + ":" + port,

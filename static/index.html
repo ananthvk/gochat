@@ -5,53 +5,58 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GoChat</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/normalize.css@8.0.1/normalize.css" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
 </head>
 
 <body>
-    <h2>GoChat</h2>
-    <input type="text" id="txtinput">
-    <input type="button" value="Send" onclick="sendmessage()" />
-    <div id="messages">
-        <h1>Messages</h1>
+    <div class="main-container">
+        <div class="sidebar">
+            Sidebar content
+        </div>
+        <div class="chatbox">
+            <div class="messages" id="messages">
+                <div class="message message-self">
+                    My message
+                </div>
+                <div class="message message-other">
+                    Other message
+                </div>
+                <div class="message message-self">
+                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum pretium ut lacus non dapibus.
+                    Fusce a placerat leo. Curabitur commodo nibh vel arcu volutpat accumsan. In hac habitasse platea
+                    dictumst. Fusce tempus nibh quis nulla imperdiet interdum. Nam tincidunt leo finibus nisi vehicula
+                    ultrices. Maecenas sit amet efficitur felis. Curabitur ut blandit lacus, et molestie augue.
+
+                    Suspendisse efficitur metus et faucibus laoreet. Orci varius natoque penatibus et magnis dis
+                    parturient montes, nascetur ridiculus mus. Maecenas in diam elementum eros sollicitudin iaculis.
+                    Nunc non purus magna. Quisque sollicitudin condimentum quam non sagittis. Cras at diam imperdiet,
+                    condimentum nunc in, pharetra lectus. Pellentesque accumsan, turpis a vehicula sodales, ligula dolor
+                    ultricies magna, et luctus risus sem in risus. Phasellus vestibulum, ipsum vel suscipit maximus,
+                    tortor diam imperdiet sapien, at placerat purus eros a urna. Suspendisse potenti. Duis quis sem ut
+                    ipsum ultricies vulputate sed eu diam. Mauris sollicitudin turpis in sollicitudin vehicula. Aenean
+                    nec massa ac enim rhoncus ultricies. Nullam ac quam risus. Nulla augue magna, condimentum non velit
+                    et, congue fringilla nisl.
+                </div>
+                <div class="message message-other">
+                    Suspendisse efficitur metus et faucibus laoreet. Orci varius natoque penatibus et magnis dis
+                    parturient montes, nascetur ridiculus mus. Maecenas in diam elementum eros sollicitudin iaculis.
+                    Nunc non purus magna. Quisque sollicitudin condimentum quam non sagittis. Cras at diam imperdiet,
+                    condimentum nunc in, pharetra lectus. Pellentesque accumsan, turpis a vehicula sodales, ligula dolor
+                    ultricies magna, et luctus risus sem in risus. Phasellus vestibulum, ipsum vel suscipit maximus,
+                    tortor diam imperdiet sapien, at placerat purus eros a urna. Suspendisse potenti. Duis quis sem ut
+                    ipsum ultricies vulputate sed eu diam. Mauris sollicitudin turpis in sollicitudin vehicula. Aenean
+                    nec massa ac enim rhoncus ultricies. Nullam ac quam risus. Nulla augue magna, condimentum non velit
+                    et, congue fringilla nisl.
+                </div>
+            </div>
+            <form class="message-input-form" id="message-form">
+                <input type="text" id="message-input" class="message-input" placeholder="Type your message here...">
+                <button type="submit" id="message-send" class="message-send-btn">➤</button>
+            </form>
+        </div>
     </div>
-    <script>
-        let socket = new WebSocket("ws://192.168.1.199:8000/api/v1/realtime/ws");
-
-        socket.onopen = () => {
-            console.log("Connection established");
-        };
-
-        socket.onclose = event => {
-            console.log("Closed connection: ", event);
-        };
-
-        socket.onerror = error => {
-            console.log("Error occured: ", error);
-        };
-
-        socket.onmessage = event => {
-            let text = event.data;
-            console.log(text)
-            console.log("GOT MESSAGE FROM SERVER", event)
-            let newNode = document.createElement("p")
-            newNode.textContent = text
-            document.getElementById("messages").appendChild(newNode)
-        }
-
-        function sendmessage() {
-            console.log("Sending message")
-            let txtbox = document.getElementById("txtinput")
-            console.log("Sending text ", txtbox.value)
-            if (txtbox.value) {
-                socket.send(txtbox.value)
-                let newNode = document.createElement("p")
-                newNode.textContent = txtbox.value
-                document.getElementById("messages").appendChild(newNode)
-                txtbox.value = "";
-            }
-        }
-
-    </script>
 </body>
 
 </html>
