@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -54,7 +55,7 @@ func newClient(connection *websocket.Conn, hub *hub) *client {
 // It reads events from the client, and passes those events to the Hub for further processing
 func (c *client) ReaderLoop() {
 	defer func() {
-		c.Hub.control <- unregisterConnectionEvent{Client: c}
+		c.Hub.control <- hubConnectionUnregistered{Client: c}
 		err := c.Connection.Close()
 		if err != nil {
 			slog.Error("error while closing websocket", "error", err)
@@ -77,10 +78,17 @@ func (c *client) ReaderLoop() {
 			return
 		}
 
+		var packet wsMessagePacket
+
+		if err := json.Unmarshal(p, &packet); err != nil {
+			slog.Warn("json unmarshalling of message failed", "clientId", c.ID, "messageType", messageType, "size", len(p), "error", err)
+			continue
+		}
+
 		// Send the event to the hub for further processing
 		// If the Hub Events is full, drop the message, so that the client retransmits it again
 		select {
-		case c.Hub.events <- dataEvent{Client: c, Data: p}:
+		case c.Hub.events <- hubDataReceived{Client: c, Message: packet}:
 			slog.Info("message enqueued to hub", "clientId", c.ID, "messageType", messageType, "size", len(p))
 		default:
 			slog.Warn("hub events channel full, dropped message", "clientId", c.ID, "messageType", messageType, "size", len(p))

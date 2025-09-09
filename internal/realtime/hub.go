@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"encoding/json"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -37,32 +38,46 @@ func (h *hub) RunEventLoop() {
 		select {
 		case event := <-h.events:
 			switch e := event.(type) {
-			case dataEvent:
-				// For now, send the message to all connected clients
-				for _, client := range h.clients {
-					if client.ID == e.Client.ID {
+			case hubDataReceived:
+				message := e.Message
+				switch message.Type {
+				case "chat_message":
+					var payload wsChatMessage
+					if err := json.Unmarshal(message.Payload, &payload); err != nil {
+						slog.Warn("malformed json payload", "from", e.Client.ID, "message_type", "chat_message", "error", err)
 						continue
 					}
-					select {
-					case client.Outgoing <- e.Data:
-						slog.Info("sent data", "from", e.Client.ID, "to", client.ID, "size", len(e.Data))
-					default:
-						slog.Warn("client outgoing channel full, dropping message", "from", e.Client.ID, "to", client.ID, "size", len(e.Data))
+
+					// For now, send the message to all connected clients
+					for _, client := range h.clients {
+						if client.ID == e.Client.ID {
+							continue
+						}
+
+						select {
+						case client.Outgoing <- []byte(payload.Message):
+							slog.Info("sent data", "from", e.Client.ID, "to", client.ID, "size", len(payload.Message))
+						default:
+							slog.Warn("client outgoing channel full, dropping message", "from", e.Client.ID, "to", client.ID)
+						}
 					}
+
+				default:
+					slog.Warn("invalid message type", "type", message.Type)
+					continue
 				}
-				slog.Info("processed data event", "size", len(e.Data), "clientId", e.Client.ID)
 			default:
 				slog.Error("internal error", "reason", "unknown event")
 				panic("unknown event")
 			}
 		case event := <-h.control:
 			switch e := event.(type) {
-			case registerConnectionEvent:
+			case hubConnectionRegistered:
 				h.clients[e.Client.ID] = e.Client
 				go e.Client.ReaderLoop()
 				go e.Client.WriterLoop()
 				slog.Info("processed register event", "clientId", e.Client.ID)
-			case unregisterConnectionEvent:
+			case hubConnectionUnregistered:
 				// Check if the client is active
 				if _, ok := h.clients[e.Client.ID]; ok {
 					delete(h.clients, e.Client.ID)
@@ -83,6 +98,6 @@ func (h *hub) RunEventLoop() {
 // It also starts the Reader and Writer loop as two goroutines for the connection
 func (h *hub) addConnection(connection *websocket.Conn) uuid.UUID {
 	client := newClient(connection, h)
-	h.control <- registerConnectionEvent{Client: client}
+	h.control <- hubConnectionRegistered{Client: client}
 	return client.ID
 }
