@@ -15,16 +15,16 @@ type hubConnectionUnregistered struct {
 }
 
 type hubDataReceived struct {
-	Client  *client
-	Message wsMessagePacket
+	Client *client
+	Packet wsDataPacket
 }
 
 // Application level events (Data of a hubDataReceived event) contains one of these
 
-// wsMessagePacket contains the data received from a websocket. It's a JSON message containing two fields.
+// wsDataPacket contains the data received from a websocket. It's a JSON message containing two fields.
 // A Type field, and a Payload field. The Type field determines the type of message, and the paylod contains any JSON object
 // that can be parsed later depending upon the type.
-type wsMessagePacket struct {
+type wsDataPacket struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
 }

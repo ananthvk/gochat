@@ -78,20 +78,20 @@ func (c *client) ReaderLoop() {
 			return
 		}
 
-		var packet wsMessagePacket
+		var packet wsDataPacket
 
 		if err := json.Unmarshal(p, &packet); err != nil {
-			slog.Warn("json unmarshalling of message failed", "clientId", c.ID, "messageType", messageType, "size", len(p), "error", err)
+			slog.Warn("json unmarshalling of packet failed", "clientId", c.ID, "messageType", messageType, "size", len(p), "error", err)
 			continue
 		}
 
-		// Send the event to the hub for further processing
-		// If the Hub Events is full, drop the message, so that the client retransmits it again
+		// Send the packet to the hub for further processing
+		// If the Hub Events is full, drop the packet, so that the client retransmits it again
 		select {
-		case c.Hub.events <- hubDataReceived{Client: c, Message: packet}:
+		case c.Hub.events <- hubDataReceived{Client: c, Packet: packet}:
 			slog.Info("message enqueued to hub", "clientId", c.ID, "messageType", messageType, "size", len(p))
 		default:
-			slog.Warn("hub events channel full, dropped message", "clientId", c.ID, "messageType", messageType, "size", len(p))
+			slog.Warn("hub events channel full, dropped packet", "clientId", c.ID, "messageType", messageType, "size", len(p))
 		}
 	}
 }
