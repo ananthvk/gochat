@@ -19,10 +19,9 @@ document.addEventListener("DOMContentLoaded", function (event) {
     };
 
     socket.onmessage = event => {
-        let text = event.data;
-        console.log(text);
-        console.log("GOT MESSAGE FROM SERVER", event);
-        createMessageElement(text, false);
+        let message = event.data;
+        const response = JSON.parse(message)
+        createMessageElement(response["payload"]["message"], false);
         scrollToBottomIfAtEnd();
     }
 
@@ -30,6 +29,8 @@ document.addEventListener("DOMContentLoaded", function (event) {
         e.preventDefault();
         sendmessage();
     });
+    
+    scrollToBottom();
 })
 
 function sendmessage() {

@@ -83,13 +83,24 @@ func (h *hub) broadcastMessageExceptSender(sender *client, payload wsChatMessage
 		if client.ID == sender.ID {
 			continue
 		}
+		wsMessage := wsDataPacket{
+			Type: "chat_message",
+			Payload: toRaw(wsChatMessage{
+				Message: payload.Message,
+			}),
+		}
 		select {
-		case client.Outgoing <- []byte(payload.Message):
+		case client.Outgoing <- wsMessage:
 			slog.Info("sent data", "from", sender.ID, "to", client.ID, "size", len(payload.Message))
 		default:
 			slog.Warn("client outgoing channel full, dropping message", "from", sender.ID, "to", client.ID)
 		}
 	}
+}
+
+func toRaw(v any) json.RawMessage {
+	b, _ := json.Marshal(v)
+	return b
 }
 
 // processControlEvent handles control events for the hub, processing connection

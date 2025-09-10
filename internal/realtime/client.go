@@ -35,7 +35,7 @@ type client struct {
 	ID          uuid.UUID
 	Connection  *websocket.Conn
 	ConnectedAt time.Time
-	Outgoing    chan []byte
+	Outgoing    chan wsDataPacket
 	Hub         *hub
 }
 
@@ -46,7 +46,7 @@ func newClient(connection *websocket.Conn, hub *hub) *client {
 		ID:          uuid.New(),
 		Connection:  connection,
 		ConnectedAt: time.Now().UTC(),
-		Outgoing:    make(chan []byte, maxClientOutgoingSize),
+		Outgoing:    make(chan wsDataPacket, maxClientOutgoingSize),
 		Hub:         hub,
 	}
 }
@@ -117,14 +117,20 @@ func (c *client) WriterLoop() {
 				slog.Info("sent close message", "clientId", c.ID)
 				return
 			}
-			err := c.Connection.WriteMessage(websocket.TextMessage, message)
+			b, err := json.Marshal(message)
+			if err != nil {
+				slog.Error("could not marshal outgoing message to bytes", "clientId", c.ID, "size", len(b), "error", err)
+				continue
+			}
+
+			err = c.Connection.WriteMessage(websocket.TextMessage, b)
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-					slog.Error("message delivery failed", "clientId", c.ID, "size", len(message), "error", err)
+					slog.Error("message delivery failed", "clientId", c.ID, "size", len(b), "error", err)
 				}
 				return
 			}
-			slog.Info("message delivery successful", "clientId", c.ID, "size", len(message))
+			slog.Info("message delivery successful", "clientId", c.ID, "size", len(b))
 		case <-ticker.C:
 			c.Connection.SetWriteDeadline(time.Now().Add(maxWriteWait))
 			err := c.Connection.WriteMessage(websocket.PingMessage, nil)
