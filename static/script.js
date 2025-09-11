@@ -4,7 +4,7 @@ var socket = null;
 const SCROLL_MESSAGES_DISTANCE = 100;
 
 document.addEventListener("DOMContentLoaded", function (event) {
-    socket = new WebSocket("ws://192.168.1.199:8000/api/v1/realtime/ws");
+    socket = new WebSocket("ws://0.0.0.0:8000/api/v1/realtime/ws");
 
     socket.onopen = () => {
         console.log("Connection established");
@@ -19,10 +19,9 @@ document.addEventListener("DOMContentLoaded", function (event) {
     };
 
     socket.onmessage = event => {
-        let text = event.data;
-        console.log(text);
-        console.log("GOT MESSAGE FROM SERVER", event);
-        createMessageElement(text, false);
+        let message = event.data;
+        const response = JSON.parse(message)
+        createMessageElement(response["payload"]["message"], false);
         scrollToBottomIfAtEnd();
     }
 
@@ -30,6 +29,8 @@ document.addEventListener("DOMContentLoaded", function (event) {
         e.preventDefault();
         sendmessage();
     });
+    
+    scrollToBottom();
 })
 
 function sendmessage() {
@@ -37,7 +38,15 @@ function sendmessage() {
     let messageInput = document.getElementById("message-input")
     console.log("Sending text ", messageInput.value)
     if (messageInput.value) {
-        socket.send(messageInput.value);
+        const message = JSON.stringify(
+            {
+                "type": "chat_message",
+                "payload": {
+                    "message": messageInput.value
+                }
+            }
+        )
+        socket.send(message);
         createMessageElement(messageInput.value, true);
         messageInput.value = "";
 

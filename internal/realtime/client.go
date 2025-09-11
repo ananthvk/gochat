@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"encoding/json"
 	"log/slog"
 	"time"
 
@@ -34,7 +35,7 @@ type client struct {
 	ID          uuid.UUID
 	Connection  *websocket.Conn
 	ConnectedAt time.Time
-	Outgoing    chan []byte
+	Outgoing    chan wsDataPacket
 	Hub         *hub
 }
 
@@ -45,7 +46,7 @@ func newClient(connection *websocket.Conn, hub *hub) *client {
 		ID:          uuid.New(),
 		Connection:  connection,
 		ConnectedAt: time.Now().UTC(),
-		Outgoing:    make(chan []byte, maxClientOutgoingSize),
+		Outgoing:    make(chan wsDataPacket, maxClientOutgoingSize),
 		Hub:         hub,
 	}
 }
@@ -54,7 +55,7 @@ func newClient(connection *websocket.Conn, hub *hub) *client {
 // It reads events from the client, and passes those events to the Hub for further processing
 func (c *client) ReaderLoop() {
 	defer func() {
-		c.Hub.control <- unregisterConnectionEvent{Client: c}
+		c.Hub.control <- hubConnectionUnregistered{Client: c}
 		err := c.Connection.Close()
 		if err != nil {
 			slog.Error("error while closing websocket", "error", err)
@@ -77,13 +78,20 @@ func (c *client) ReaderLoop() {
 			return
 		}
 
-		// Send the event to the hub for further processing
-		// If the Hub Events is full, drop the message, so that the client retransmits it again
+		var packet wsDataPacket
+
+		if err := json.Unmarshal(p, &packet); err != nil {
+			slog.Warn("json unmarshalling of packet failed", "clientId", c.ID, "messageType", messageType, "size", len(p), "error", err)
+			continue
+		}
+
+		// Send the packet to the hub for further processing
+		// If the Hub Events is full, drop the packet, so that the client retransmits it again
 		select {
-		case c.Hub.events <- dataEvent{Client: c, Data: p}:
+		case c.Hub.events <- hubDataReceived{Client: c, Packet: packet}:
 			slog.Info("message enqueued to hub", "clientId", c.ID, "messageType", messageType, "size", len(p))
 		default:
-			slog.Warn("hub events channel full, dropped message", "clientId", c.ID, "messageType", messageType, "size", len(p))
+			slog.Warn("hub events channel full, dropped packet", "clientId", c.ID, "messageType", messageType, "size", len(p))
 		}
 	}
 }
@@ -109,14 +117,20 @@ func (c *client) WriterLoop() {
 				slog.Info("sent close message", "clientId", c.ID)
 				return
 			}
-			err := c.Connection.WriteMessage(websocket.TextMessage, message)
+			b, err := json.Marshal(message)
+			if err != nil {
+				slog.Error("could not marshal outgoing message to bytes", "clientId", c.ID, "size", len(b), "error", err)
+				continue
+			}
+
+			err = c.Connection.WriteMessage(websocket.TextMessage, b)
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-					slog.Error("message delivery failed", "clientId", c.ID, "size", len(message), "error", err)
+					slog.Error("message delivery failed", "clientId", c.ID, "size", len(b), "error", err)
 				}
 				return
 			}
-			slog.Info("message delivery successful", "clientId", c.ID, "size", len(message))
+			slog.Info("message delivery successful", "clientId", c.ID, "size", len(b))
 		case <-ticker.C:
 			c.Connection.SetWriteDeadline(time.Now().Add(maxWriteWait))
 			err := c.Connection.WriteMessage(websocket.PingMessage, nil)
