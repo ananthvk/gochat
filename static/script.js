@@ -1,5 +1,7 @@
 var socket = null;
 
+var clientId = null;
+
 // Only scroll when the user is at the bottom of the messages list
 const SCROLL_MESSAGES_DISTANCE = 100;
 
@@ -21,15 +23,20 @@ document.addEventListener("DOMContentLoaded", function (event) {
     socket.onmessage = event => {
         let message = event.data;
         const response = JSON.parse(message)
-        createMessageElement(response["payload"]["message"], false);
-        scrollToBottomIfAtEnd();
+        if (response["type"] == "welcome") {
+            console.log("connected to server: client id: ", response["payload"]["id"])
+            clientId = response["payload"]["id"]
+        } else if (response["type"] == "chat_message") {
+            createMessageElement(response["payload"]["message"], false);
+            scrollToBottomIfAtEnd();
+        }
     }
 
     document.getElementById("message-form").addEventListener("submit", function (e) {
         e.preventDefault();
         sendmessage();
     });
-    
+
     scrollToBottom();
 })
 

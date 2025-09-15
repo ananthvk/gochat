@@ -26,9 +26,16 @@ func (r *RealtimeService) CreateRoom(name string) *room {
 	if !ok {
 		room := &room{Id: uuid.New(), Name: name}
 		r.rooms[name] = room
+		r.hub.control <- hubRoomCreated{roomId: room.Id}
 		return room
 	}
 	return existingRoom
+}
+
+func (r *RealtimeService) JoinRoom(clientId, roomId uuid.UUID) error {
+	// TODO: Add error handling, pass a channel so that the hub can signal errors back
+	r.hub.control <- hubRoomJoined{roomId: roomId, ClientId: clientId}
+	return nil
 }
 
 // ListRooms returns a list of all the rooms on this server. If there are no rooms, an empty slice is returned

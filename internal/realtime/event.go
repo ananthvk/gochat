@@ -25,6 +25,15 @@ type hubDataReceived struct {
 	Packet   wsDataPacket
 }
 
+type hubRoomCreated struct {
+	roomId uuid.UUID
+}
+
+type hubRoomJoined struct {
+	ClientId uuid.UUID
+	roomId   uuid.UUID
+}
+
 // Application level events (Data of a hubDataReceived event) contains one of these
 
 // wsDataPacket contains the data received from a websocket. It's a JSON message containing two fields.
