@@ -36,7 +36,7 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload any) {
 
 // ParseJSON parses a json object from the stream r and stores it in the value pointed by v. It interprets the errors
 // returned by Decode (if any), and converts it into human readable form if possible
-func ParseJSON(r io.ReadCloser, v any, allowUnknownFields bool) error {
+func ParseJSON(r io.Reader, v any, allowUnknownFields bool) error {
 	d := json.NewDecoder(r)
 	if !allowUnknownFields {
 		d.DisallowUnknownFields()

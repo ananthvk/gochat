@@ -47,5 +47,6 @@ type wsDataPacket struct {
 // wsChatMessage represents a chat message either sent from the client, or from the server.
 // Type is set to "chat_message"
 type wsChatMessage struct {
-	Message string `json:"message"`
+	RoomID  uuid.UUID `json:"room_id"`
+	Message string    `json:"message"`
 }

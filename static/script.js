@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", function (event) {
         if (response["type"] == "welcome") {
             console.log("connected to server: client id: ", response["payload"]["id"])
             clientId = response["payload"]["id"]
+            document.getElementById("clientid").textContent = `Client ID: ${clientId}`
         } else if (response["type"] == "chat_message") {
             createMessageElement(response["payload"]["message"], false);
             scrollToBottomIfAtEnd();
@@ -43,12 +44,18 @@ document.addEventListener("DOMContentLoaded", function (event) {
 function sendmessage() {
     console.log("Sending message")
     let messageInput = document.getElementById("message-input")
+    const room_id = document.getElementById("roomid").value;
+    if (!room_id) {
+        alert("Please specify room id")
+        return
+    }
     console.log("Sending text ", messageInput.value)
     if (messageInput.value) {
         const message = JSON.stringify(
             {
                 "type": "chat_message",
                 "payload": {
+                    "room_id": room_id,
                     "message": messageInput.value
                 }
             }

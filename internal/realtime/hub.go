@@ -73,13 +73,18 @@ func (h *hub) processDataReceivedEvent(e hubDataReceived) {
 			slog.Warn("malformed json payload", "from", e.ClientId, "message_type", "chat_message", "error", err)
 			return
 		}
+		if payload.RoomID == uuid.Nil {
+			slog.Error("roomID field missing", "from", e.ClientId, "message_type", "chat_message")
+			return
+		}
 		h.broadcastMessageExceptSender(e.ClientId, payload)
 	default:
 		slog.Warn("invalid message type", "type", message.Type)
 	}
 }
 
-// broadcastMessageExceptSender broadcasts a chat message to all connected clients except the client who sent it.
+// broadcastMessageExceptSender broadcasts a chat message to all connected clients in the same room
+// except the client who sent it.
 // If the outgoing channel of a client is full, the message is dropped and a warning is logged.
 func (h *hub) broadcastMessageExceptSender(id uuid.UUID, payload wsChatMessage) {
 	sender, ok := h.clients[id]
@@ -87,19 +92,35 @@ func (h *hub) broadcastMessageExceptSender(id uuid.UUID, payload wsChatMessage) 
 		slog.Warn("broadcast failed since client does not exist", "id", id)
 		return
 	}
-	for _, client := range h.clients {
+	room := h.rooms[payload.RoomID]
+	if room == nil {
+		slog.Warn("room does not exist, dropping message", "from", sender.ID, "room", payload.RoomID)
+		return
+	}
+
+	for clientId := range room.Clients {
+		client := h.clients[clientId]
+		if client == nil {
+			slog.Info("client does not exist anymore")
+			// Also remove the client from the room
+			delete(room.Clients, clientId)
+			continue
+		}
+
 		if client.ID == sender.ID {
 			continue
 		}
+
 		wsMessage := wsDataPacket{
 			Type: "chat_message",
 			Payload: toRaw(wsChatMessage{
+				RoomID:  payload.RoomID,
 				Message: payload.Message,
 			}),
 		}
 		select {
 		case client.Outgoing <- wsMessage:
-			slog.Info("sent data", "from", sender.ID, "to", client.ID, "size", len(payload.Message))
+			slog.Info("sent data", "from", sender.ID, "to", client.ID, "size", len(payload.Message), "room", payload.RoomID)
 		default:
 			slog.Warn("client outgoing channel full, dropping message", "from", sender.ID, "to", client.ID)
 		}
