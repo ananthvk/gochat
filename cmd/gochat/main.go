@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/ananthvk/gochat/internal"
+	"github.com/ananthvk/gochat/internal/app"
 	"github.com/ananthvk/gochat/internal/logging"
 	"github.com/ananthvk/gochat/internal/realtime"
 	"github.com/go-chi/chi/v5"
@@ -53,7 +54,13 @@ func main() {
 	mime.AddExtensionType(".js", "application/javascript")
 	mime.AddExtensionType(".css", "text/css")
 
-	router.Mount("/api/v1/", internal.Routes())
+	app := &app.App{
+		RealtimeService: realtime.NewRealtimeService(),
+	}
+
+	app.RealtimeService.StartHubEventLoop()
+
+	router.Mount("/api/v1/", internal.Routes(app))
 
 	fs := http.FileServer(http.Dir("./static"))
 	router.Handle("/*", fs)
@@ -62,8 +69,6 @@ func main() {
 		Addr:    host + ":" + port,
 		Handler: router,
 	}
-
-	go realtime.DefaultHub.RunEventLoop()
 
 	slog.Info("server listening", "address", server.Addr)
 	slog.Error("server quit", "error", server.ListenAndServe())
