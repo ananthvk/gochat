@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/google/uuid"
@@ -16,6 +17,7 @@ const maxEventsHub = 100
 // It handles passing of events between clients and the rest of the system
 type hub struct {
 	clients map[uuid.UUID]*client
+	rooms   map[uuid.UUID]*hubRoom
 	events  chan event
 	control chan event
 }
@@ -23,6 +25,7 @@ type hub struct {
 func newHub() *hub {
 	return &hub{
 		clients: make(map[uuid.UUID]*client),
+		rooms:   make(map[uuid.UUID]*hubRoom),
 		events:  make(chan event, maxEventsHub),
 		control: make(chan event),
 	}
@@ -82,6 +85,7 @@ func (h *hub) broadcastMessageExceptSender(id uuid.UUID, payload wsChatMessage) 
 	sender, ok := h.clients[id]
 	if !ok {
 		slog.Warn("broadcast failed since client does not exist", "id", id)
+		return
 	}
 	for _, client := range h.clients {
 		if client.ID == sender.ID {
@@ -117,6 +121,10 @@ func (h *hub) processControlEvent(event event) {
 		h.processRegisterEvent(e)
 	case hubConnectionUnregistered:
 		h.processUnregisterEvent(e)
+	case hubRoomCreated:
+		h.processRoomCreateEvent(e)
+	case hubRoomJoined:
+		h.processRoomJoinEvent(e)
 	default:
 		slog.Error("internal error", "reason", "unknown control event")
 		panic("unknown control event")
@@ -128,6 +136,16 @@ func (h *hub) processControlEvent(event event) {
 func (h *hub) processRegisterEvent(e hubConnectionRegistered) {
 	client := newClient(e.ClientId, e.Connection, h)
 	h.clients[e.ClientId] = client
+
+	// Send the welcome/connected message to the client with the client's id
+	// The client requires this id to perform HTTP requests with the server
+	h.clients[e.ClientId].Outgoing <- wsDataPacket{
+		Type: "welcome",
+		Payload: json.RawMessage(
+			fmt.Appendf(nil, `{"id":"%s"}`, e.ClientId.String()),
+		),
+	}
+
 	go client.ReaderLoop()
 	go client.WriterLoop()
 	slog.Info("processed register event", "clientId", e.ClientId)
@@ -140,6 +158,16 @@ func (h *hub) processUnregisterEvent(e hubConnectionUnregistered) {
 	if client, ok := h.clients[e.ClientId]; ok {
 		delete(h.clients, e.ClientId)
 		close(client.Outgoing)
+
+		// Remove the client from all the rooms they are connected to
+		for roomId := range client.Rooms {
+			room := h.rooms[roomId]
+			if room == nil {
+				continue
+			}
+			slog.Info("removed client from room", "clientId", e.ClientId, "roomId", room.Id)
+			delete(room.Clients, e.ClientId)
+		}
 		slog.Info("processed unregister event", "clientId", e.ClientId)
 	} else {
 		slog.Warn("unregister failed", "clientId", e.ClientId, "reason", "client with specified id does not exist")
@@ -152,4 +180,38 @@ func (h *hub) addConnection(connection *websocket.Conn) uuid.UUID {
 	id := uuid.New()
 	h.control <- hubConnectionRegistered{ClientId: id, Connection: connection}
 	return id
+}
+
+func (h *hub) processRoomJoinEvent(e hubRoomJoined) {
+	room, ok := h.rooms[e.roomId]
+	if !ok {
+		slog.Warn("join room(hub) failed", "reason", "room does not exist", "clientId", e.ClientId, "roomId", e.roomId)
+		return
+	}
+
+	_, ok = room.Clients[e.ClientId]
+	if ok {
+		slog.Warn("join room(hub) failed", "reason", "client already part of room", "clientId", e.ClientId, "roomId", e.roomId)
+		return
+	}
+
+	client := h.clients[e.ClientId]
+	if client == nil {
+		slog.Warn("join room(hub) failed", "reason", "client does not exist", "clientId", e.ClientId, "roomId", e.roomId)
+		return
+	}
+
+	room.Clients[e.ClientId] = struct{}{}
+	client.Rooms[e.roomId] = struct{}{}
+	slog.Info("join room(hub) successful", "clientId", client.ID, "roomId", e.roomId)
+}
+
+func (h *hub) processRoomCreateEvent(e hubRoomCreated) {
+	_, ok := h.rooms[e.roomId]
+	if ok {
+		slog.Info("not creating new room(hub) since it already exists", "id", e.roomId)
+		return
+	}
+	h.rooms[e.roomId] = newHubRoom(e.roomId)
+	slog.Info("created new room(hub)", "id", e.roomId)
 }

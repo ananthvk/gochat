@@ -37,6 +37,7 @@ type client struct {
 	ConnectedAt time.Time
 	Outgoing    chan wsDataPacket
 	Hub         *hub
+	Rooms       map[uuid.UUID]struct{}
 	// TODO: Add another field, isActive to check if an event is sent to an already disconnected client
 }
 
@@ -49,6 +50,7 @@ func newClient(id uuid.UUID, connection *websocket.Conn, hub *hub) *client {
 		ConnectedAt: time.Now().UTC(),
 		Outgoing:    make(chan wsDataPacket, maxClientOutgoingSize),
 		Hub:         hub,
+		Rooms:       make(map[uuid.UUID]struct{}),
 	}
 }
 

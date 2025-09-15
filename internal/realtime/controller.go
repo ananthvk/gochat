@@ -7,6 +7,7 @@ import (
 
 	"github.com/ananthvk/gochat/internal/helpers"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -19,6 +20,7 @@ func Routes(rt *RealtimeService) chi.Router {
 	realtimeRouter := chi.NewRouter()
 	realtimeRouter.Get("/ws", func(w http.ResponseWriter, r *http.Request) { handlerCreateWSConnection(rt, w, r) })
 	realtimeRouter.Post("/room", func(w http.ResponseWriter, r *http.Request) { handleCreateRoom(rt, w, r) })
+	realtimeRouter.Post("/room/join", func(w http.ResponseWriter, r *http.Request) { handleJoinRoom(rt, w, r) })
 	realtimeRouter.Get("/room/by-name/{name}", func(w http.ResponseWriter, r *http.Request) { handleGetRoomByName(rt, w, r) })
 	realtimeRouter.Get("/room", func(w http.ResponseWriter, r *http.Request) { handleGetRooms(rt, w, r) })
 	return realtimeRouter
@@ -59,6 +61,30 @@ func handleCreateRoom(rt *RealtimeService, w http.ResponseWriter, r *http.Reques
 	}
 	room := rt.CreateRoom(createRoomRequest.Name)
 	helpers.RespondWithJSON(w, http.StatusCreated, room)
+}
+
+func handleJoinRoom(rt *RealtimeService, w http.ResponseWriter, r *http.Request) {
+	joinRoomRequest := struct {
+		ClientId *uuid.UUID `json:"client_id"`
+		RoomId   *uuid.UUID `json:"room_id"`
+	}{}
+
+	if err := helpers.ParseJSON(r.Body, &joinRoomRequest, false); err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "post body malformed", err.Error())
+		return
+	}
+
+	if joinRoomRequest.ClientId == nil || joinRoomRequest.RoomId == nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "missing id", "either client_id or room_id is missing")
+		return
+	}
+
+	if err := rt.JoinRoom(*joinRoomRequest.ClientId, *joinRoomRequest.RoomId); err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "join failed", err.Error())
+		return
+	}
+
+	helpers.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "joined"})
 }
 
 func handlerCreateWSConnection(rt *RealtimeService, w http.ResponseWriter, r *http.Request) {
