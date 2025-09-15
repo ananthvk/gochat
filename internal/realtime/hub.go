@@ -67,10 +67,10 @@ func (h *hub) processDataReceivedEvent(e hubDataReceived) {
 	case "chat_message":
 		var payload wsChatMessage
 		if err := json.Unmarshal(message.Payload, &payload); err != nil {
-			slog.Warn("malformed json payload", "from", e.Client.ID, "message_type", "chat_message", "error", err)
+			slog.Warn("malformed json payload", "from", e.ClientId, "message_type", "chat_message", "error", err)
 			return
 		}
-		h.broadcastMessageExceptSender(e.Client, payload)
+		h.broadcastMessageExceptSender(e.ClientId, payload)
 	default:
 		slog.Warn("invalid message type", "type", message.Type)
 	}
@@ -78,7 +78,11 @@ func (h *hub) processDataReceivedEvent(e hubDataReceived) {
 
 // broadcastMessageExceptSender broadcasts a chat message to all connected clients except the client who sent it.
 // If the outgoing channel of a client is full, the message is dropped and a warning is logged.
-func (h *hub) broadcastMessageExceptSender(sender *client, payload wsChatMessage) {
+func (h *hub) broadcastMessageExceptSender(id uuid.UUID, payload wsChatMessage) {
+	sender, ok := h.clients[id]
+	if !ok {
+		slog.Warn("broadcast failed since client does not exist", "id", id)
+	}
 	for _, client := range h.clients {
 		if client.ID == sender.ID {
 			continue
@@ -122,29 +126,30 @@ func (h *hub) processControlEvent(event event) {
 // processRegisterEvent handles a register event. This event is generated when a new connection is created.
 // It also starts a reader and writer loop for the new connection, in two new goroutines.
 func (h *hub) processRegisterEvent(e hubConnectionRegistered) {
-	h.clients[e.Client.ID] = e.Client
-	go e.Client.ReaderLoop()
-	go e.Client.WriterLoop()
-	slog.Info("processed register event", "clientId", e.Client.ID)
+	client := newClient(e.ClientId, e.Connection, h)
+	h.clients[e.ClientId] = client
+	go client.ReaderLoop()
+	go client.WriterLoop()
+	slog.Info("processed register event", "clientId", e.ClientId)
 }
 
 // processUnregisterEvent handles an unregister event. This event is generated when a connection is closed
 // when the client disconnects. It deletes the client from the clients map.
 func (h *hub) processUnregisterEvent(e hubConnectionUnregistered) {
 	// Check if the client is active
-	if _, ok := h.clients[e.Client.ID]; ok {
-		delete(h.clients, e.Client.ID)
-		close(e.Client.Outgoing)
-		slog.Info("processed unregister event", "clientId", e.Client.ID)
+	if client, ok := h.clients[e.ClientId]; ok {
+		delete(h.clients, e.ClientId)
+		close(client.Outgoing)
+		slog.Info("processed unregister event", "clientId", e.ClientId)
 	} else {
-		slog.Warn("unregister failed", "clientId", e.Client.ID, "reason", "client with specified id does not exist")
+		slog.Warn("unregister failed", "clientId", e.ClientId, "reason", "client with specified id does not exist")
 	}
 }
 
 // addConnection adds the websocket connection to the hub and returns the client ID.
 // It also starts the Reader and Writer loop as two goroutines for the connection
 func (h *hub) addConnection(connection *websocket.Conn) uuid.UUID {
-	client := newClient(connection, h)
-	h.control <- hubConnectionRegistered{Client: client}
-	return client.ID
+	id := uuid.New()
+	h.control <- hubConnectionRegistered{ClientId: id, Connection: connection}
+	return id
 }
