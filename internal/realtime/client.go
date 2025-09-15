@@ -37,13 +37,14 @@ type client struct {
 	ConnectedAt time.Time
 	Outgoing    chan wsDataPacket
 	Hub         *hub
+	// TODO: Add another field, isActive to check if an event is sent to an already disconnected client
 }
 
 // newClient creates a client from the passed websocket connection.
-// It sets an unique ID to this connection, and creates the outgoing channel
-func newClient(connection *websocket.Conn, hub *hub) *client {
+// It creates the outgoing channel. An unique ID (UUID) needs to be passed
+func newClient(id uuid.UUID, connection *websocket.Conn, hub *hub) *client {
 	return &client{
-		ID:          uuid.New(),
+		ID:          id,
 		Connection:  connection,
 		ConnectedAt: time.Now().UTC(),
 		Outgoing:    make(chan wsDataPacket, maxClientOutgoingSize),
@@ -55,7 +56,7 @@ func newClient(connection *websocket.Conn, hub *hub) *client {
 // It reads events from the client, and passes those events to the Hub for further processing
 func (c *client) ReaderLoop() {
 	defer func() {
-		c.Hub.control <- hubConnectionUnregistered{Client: c}
+		c.Hub.control <- hubConnectionUnregistered{ClientId: c.ID}
 		err := c.Connection.Close()
 		if err != nil {
 			slog.Error("error while closing websocket", "error", err)
@@ -88,7 +89,7 @@ func (c *client) ReaderLoop() {
 		// Send the packet to the hub for further processing
 		// If the Hub Events is full, drop the packet, so that the client retransmits it again
 		select {
-		case c.Hub.events <- hubDataReceived{Client: c, Packet: packet}:
+		case c.Hub.events <- hubDataReceived{ClientId: c.ID, Packet: packet}:
 			slog.Info("message enqueued to hub", "clientId", c.ID, "messageType", messageType, "size", len(p))
 		default:
 			slog.Warn("hub events channel full, dropped packet", "clientId", c.ID, "messageType", messageType, "size", len(p))

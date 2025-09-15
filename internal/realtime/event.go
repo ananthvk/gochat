@@ -1,22 +1,28 @@
 package realtime
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
+)
 
 type event any
 
 // Hub level events
 
 type hubConnectionRegistered struct {
-	Client *client
+	ClientId   uuid.UUID
+	Connection *websocket.Conn
 }
 
 type hubConnectionUnregistered struct {
-	Client *client
+	ClientId uuid.UUID
 }
 
 type hubDataReceived struct {
-	Client *client
-	Packet wsDataPacket
+	ClientId uuid.UUID
+	Packet   wsDataPacket
 }
 
 // Application level events (Data of a hubDataReceived event) contains one of these
