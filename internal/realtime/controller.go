@@ -54,7 +54,7 @@ func handleCreateRoom(rt *RealtimeService, w http.ResponseWriter, r *http.Reques
 	createRoomRequest := struct {
 		Name string `json:"name"`
 	}{}
-	err := helpers.ParseJSON(r.Body, &createRoomRequest, false)
+	err := helpers.ReadJSONBody(r, &createRoomRequest)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "post body malformed", err.Error())
 		return
