@@ -2,11 +2,14 @@ var socket = null;
 
 var clientId = null;
 
+const socketBase = "ws://localhost:8000"
+const apiBase = "http://localhost:8000"
+
 // Only scroll when the user is at the bottom of the messages list
 const SCROLL_MESSAGES_DISTANCE = 100;
 
 document.addEventListener("DOMContentLoaded", function (event) {
-    socket = new WebSocket("ws://0.0.0.0:8000/api/v1/realtime/ws");
+    socket = new WebSocket(`${socketBase}/api/v1/realtime/ws`);
 
     socket.onopen = () => {
         console.log("Connection established");
@@ -40,6 +43,36 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
     scrollToBottom();
 })
+
+document.getElementById("create-room-btn").addEventListener("click", async () => {
+    const name = document.getElementById("roomname").value.trim();
+    if (!name) return;
+    let roomId;
+
+    // try create
+    let res = await fetch(`${apiBase}/api/v1/realtime/room`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+    });
+
+    if (res.status === 201) {
+        roomId = (await res.json()).id;
+    } else {
+        // fallback to get-by-name
+        const getRes = await fetch(`${apiBase}/api/v1/realtime/room/by-name/${encodeURIComponent(name)}`);
+        roomId = (await getRes.json()).id;
+    }
+
+    document.getElementById("roomid").value = roomId;
+
+    // join room
+    await fetch(`${apiBase}/api/v1/realtime/room/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ client_id: clientId, room_id: roomId })
+    });
+});
 
 function sendmessage() {
     console.log("Sending message")

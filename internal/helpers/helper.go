@@ -10,6 +10,11 @@ import (
 	"runtime/debug"
 )
 
+const (
+	// Limit the size of request body to 1 MB to prevent DOS attacks
+	maxRequestJSONBody = 1_000_000 + 1
+)
+
 func RespondWithError(w http.ResponseWriter, code int, err, reason string) {
 	if code > 499 {
 		slog.Error("Responding with 5xx error", "code", code, "err", err, "reason", reason, "stack", debug.Stack())
@@ -66,5 +71,18 @@ func ParseJSON(r io.Reader, v any, allowUnknownFields bool) error {
 			return err
 		}
 	}
+
+	// Call decode once again to check for additional data after the request body
+	err = d.Decode(&struct{}{})
+	if err != io.EOF {
+		return fmt.Errorf("body contains extra data after JSON value")
+	}
 	return nil
+}
+
+// ReadJSONBody returns the JSON body contained in the request. It internally calls ParseJSON.
+// It also limits the maximum size of body to 1MB
+func ReadJSONBody(r *http.Request, v any) error {
+	reader := http.MaxBytesReader(nil, r.Body, int64(maxRequestJSONBody))
+	return ParseJSON(reader, v, false)
 }
