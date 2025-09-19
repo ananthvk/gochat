@@ -1,11 +1,8 @@
 package integration
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
 	"net/url"
-	"strings"
 	"testing"
 
 	"github.com/ananthvk/gochat/internal/testutils"
@@ -17,23 +14,14 @@ func TestRoomCreation(t *testing.T) {
 	defer srv.Close()
 	defer cancel()
 
-	reqBody := strings.NewReader(`{"name": "test-room"}`)
-	resp, err := http.Post(srv.URL+"/api/v1/realtime/room", "application/json", reqBody)
-	if err != nil {
-		t.Fatalf("Failed to make POST request: %v", err)
-	}
-	if resp.StatusCode != http.StatusCreated {
-		t.Errorf("expected 201 response, got %v", resp.StatusCode)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("Failed to read response body: %v", err)
-	}
+	resp := testutils.MakePostRequest(
+		t, srv, "/api/v1/realtime/room", map[string]any{
+			"name": "test-room",
+		})
+	testutils.CheckStatusCode(t, resp, http.StatusCreated)
 
-	var respData map[string]any
-	if err := json.Unmarshal(body, &respData); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
-	}
+	respData := map[string]any{}
+	testutils.UnmarshalJSONResponse(t, resp, &respData)
 
 	roomId, ok := respData["id"].(string)
 	if !ok {
@@ -58,20 +46,12 @@ func TestRoomByName(t *testing.T) {
 
 	resp, err := http.Get(srv.URL + "/api/v1/realtime/room/by-name/" + url.PathEscape(roomName))
 	if err != nil {
-		t.Fatalf("Failed to make POST request: %v", err)
+		t.Fatalf("Failed to make GET request: %v", err)
 	}
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected 200 response, got %v", resp.StatusCode)
-	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("Failed to read response body: %v", err)
-	}
+	testutils.CheckStatusCode(t, resp, http.StatusOK)
 
-	var respData map[string]any
-	if err := json.Unmarshal(body, &respData); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
-	}
+	respData := map[string]any{}
+	testutils.UnmarshalJSONResponse(t, resp, &respData)
 
 	roomId, ok := respData["id"].(string)
 	if !ok {

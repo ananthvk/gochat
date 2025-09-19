@@ -12,6 +12,7 @@ import (
 )
 
 func NewTestServer(t *testing.T, ctx context.Context) (*app.App, *chi.Mux) {
+	t.Helper()
 	router := chi.NewRouter()
 	app := &app.App{
 		Ctx:             ctx,
@@ -23,6 +24,7 @@ func NewTestServer(t *testing.T, ctx context.Context) (*app.App, *chi.Mux) {
 }
 
 func NewTestServerWithCancel(t *testing.T) (*app.App, *httptest.Server, context.CancelFunc) {
+	t.Helper()
 	ctx, cancel := context.WithCancel(context.Background())
 	app, router := NewTestServer(t, ctx)
 	srv := httptest.NewServer(router)
