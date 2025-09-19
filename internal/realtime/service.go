@@ -1,6 +1,10 @@
 package realtime
 
-import "github.com/google/uuid"
+import (
+	"context"
+
+	"github.com/google/uuid"
+)
 
 type room struct {
 	Id   uuid.UUID `json:"id"`
@@ -10,12 +14,14 @@ type room struct {
 type RealtimeService struct {
 	rooms map[string]*room
 	hub   *hub
+	ctx   context.Context
 }
 
-func NewRealtimeService() *RealtimeService {
+func NewRealtimeService(ctx context.Context) *RealtimeService {
 	return &RealtimeService{
 		rooms: map[string]*room{},
 		hub:   newHub(),
+		ctx:   ctx,
 	}
 }
 
@@ -56,5 +62,5 @@ func (r *RealtimeService) GetRoomByName(name string) *room {
 
 // StartHubEventLoop starts the event loop of the hub in a separate goroutine
 func (r *RealtimeService) StartHubEventLoop() {
-	go r.hub.RunEventLoop()
+	go r.hub.RunEventLoop(r.ctx)
 }

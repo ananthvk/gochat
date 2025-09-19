@@ -1,6 +1,7 @@
 package realtime
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -35,7 +36,7 @@ func newHub() *hub {
 // It waits on events channel, and processes the events it received from the clients.
 // TODO: NOTE: Since both kind of events (control, and data events) are multiplexed and processed in the same goroutine,
 // it may lead to starvation. Research/Identify some method to prevent starvation.
-func (h *hub) RunEventLoop() {
+func (h *hub) RunEventLoop(ctx context.Context) {
 	slog.Info("started hub event loop")
 	for {
 		select {
@@ -43,6 +44,14 @@ func (h *hub) RunEventLoop() {
 			h.processEvent(event)
 		case event := <-h.control:
 			h.processControlEvent(event)
+		case <-ctx.Done():
+			slog.Info("unregistring all connected clients")
+			for _, client := range h.clients {
+				e := hubConnectionUnregistered{ClientId: client.ID}
+				h.processUnregisterEvent(e)
+			}
+			slog.Info("stopped hub context loop", "reason", ctx.Err())
+			return
 		}
 	}
 }

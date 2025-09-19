@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"mime"
 	"net/http"
@@ -54,8 +55,11 @@ func main() {
 	mime.AddExtensionType(".js", "application/javascript")
 	mime.AddExtensionType(".css", "text/css")
 
+	ctx := context.Background()
+
 	app := &app.App{
-		RealtimeService: realtime.NewRealtimeService(),
+		Ctx:             ctx,
+		RealtimeService: realtime.NewRealtimeService(ctx),
 	}
 
 	app.RealtimeService.StartHubEventLoop()
