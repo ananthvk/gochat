@@ -5,6 +5,7 @@ import (
 
 	"github.com/ananthvk/gochat/internal/helpers"
 	"github.com/go-chi/chi/v5"
+	"github.com/oklog/ulid/v2"
 )
 
 func Routes(g *GroupService) chi.Router {
@@ -19,7 +20,7 @@ func Routes(g *GroupService) chi.Router {
 
 func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
 	g.Create(r.Context())
-	helpers.RespondWithJSON(w, 200, map[string]any{"status": "ok"})
+	helpers.RespondWithJSON(w, 200, map[string]any{"status": "ok", "id": ulid.Make()})
 }
 
 func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
