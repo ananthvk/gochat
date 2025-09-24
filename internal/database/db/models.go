@@ -13,4 +13,5 @@ type Grp struct {
 	Name        string             `json:"name"`
 	Description string             `json:"description"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	PublicID    []byte             `json:"public_id"`
 }

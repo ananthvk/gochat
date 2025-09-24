@@ -7,21 +7,111 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getGroup = `-- name: GetGroup :one
-SELECT id, name, description, created_at FROM grp
-WHERE id = $1 LIMIT 1
+const createGroup = `-- name: CreateGroup :one
+INSERT INTO grp (name, description, public_id)
+VALUES ($1, $2, $3)
+RETURNING id
 `
 
-func (q *Queries) GetGroup(ctx context.Context, id int64) (Grp, error) {
-	row := q.db.QueryRow(ctx, getGroup, id)
+type CreateGroupParams struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	PublicID    []byte `json:"public_id"`
+}
+
+func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createGroup, arg.Name, arg.Description, arg.PublicID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const deleteGroupByPublicId = `-- name: DeleteGroupByPublicId :exec
+DELETE FROM grp
+WHERE public_id = $1
+`
+
+func (q *Queries) DeleteGroupByPublicId(ctx context.Context, publicID []byte) error {
+	_, err := q.db.Exec(ctx, deleteGroupByPublicId, publicID)
+	return err
+}
+
+const getGroupByPublicId = `-- name: GetGroupByPublicId :one
+SELECT id, name, description, created_at, public_id FROM grp
+WHERE public_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetGroupByPublicId(ctx context.Context, publicID []byte) (*Grp, error) {
+	row := q.db.QueryRow(ctx, getGroupByPublicId, publicID)
 	var i Grp
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Description,
 		&i.CreatedAt,
+		&i.PublicID,
 	)
-	return i, err
+	return &i, err
+}
+
+const getGroups = `-- name: GetGroups :many
+SELECT id, name, description, created_at, public_id FROM grp
+`
+
+func (q *Queries) GetGroups(ctx context.Context) ([]*Grp, error) {
+	rows, err := q.db.Query(ctx, getGroups)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*Grp
+	for rows.Next() {
+		var i Grp
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.CreatedAt,
+			&i.PublicID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateGroupByPublicId = `-- name: UpdateGroupByPublicId :one
+UPDATE grp 
+SET
+    name = coalesce($1, name),
+    description = coalesce($2, description)
+WHERE public_id = $3
+RETURNING id, name, description, created_at, public_id
+`
+
+type UpdateGroupByPublicIdParams struct {
+	Name        pgtype.Text `json:"name"`
+	Description pgtype.Text `json:"description"`
+	PublicID    []byte      `json:"public_id"`
+}
+
+func (q *Queries) UpdateGroupByPublicId(ctx context.Context, arg UpdateGroupByPublicIdParams) (*Grp, error) {
+	row := q.db.QueryRow(ctx, updateGroupByPublicId, arg.Name, arg.Description, arg.PublicID)
+	var i Grp
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Description,
+		&i.CreatedAt,
+		&i.PublicID,
+	)
+	return &i, err
 }

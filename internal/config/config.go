@@ -14,6 +14,7 @@ type Config struct {
 	EnableDetailedHealthCheck bool          `env:"GOCHAT_ENABLE_DETAILED_HEALTHCHECK" envDefault:"true"`
 	DbDSN                     string        `env:"GOCHAT_DB_DSN,notEmpty"`
 	DbPingTimeout             time.Duration `env:"GOCHAT_DB_PING_TIMEOUT,notEmpty" envDefault:"5s"`
+	DbQueryTimeout            time.Duration `env:"GOCHAT_DB_QUERY_TIMEOUT,notEmpty" envDefault:"5s"`
 }
 
 func LoadEnv() {

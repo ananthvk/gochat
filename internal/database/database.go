@@ -11,8 +11,9 @@ import (
 )
 
 type DatabaseService struct {
-	Pool    *pgxpool.Pool
-	Querier db.Querier
+	Pool         *pgxpool.Pool
+	Queries      *db.Queries
+	QueryTimeout time.Duration
 }
 
 func NewDatabaseService(ctx context.Context, cfg *config.Config) (*DatabaseService, error) {
@@ -21,8 +22,8 @@ func NewDatabaseService(ctx context.Context, cfg *config.Config) (*DatabaseServi
 		slog.Error("error while creating database service", "error", err)
 		return nil, err
 	}
-	querier := db.New(pool)
-	dbService := &DatabaseService{Pool: pool, Querier: querier}
+	queries := db.New(pool)
+	dbService := &DatabaseService{Pool: pool, Queries: queries, QueryTimeout: cfg.DbQueryTimeout}
 
 	// Ping the database to check if it's online
 	err = PingDatabase(dbService, ctx, cfg.DbPingTimeout)

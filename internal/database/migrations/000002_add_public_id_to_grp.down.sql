@@ -1,0 +1,3 @@
+DROP INDEX IF EXISTS idx_public_id;
+
+ALTER TABLE grp DROP COLUMN IF EXISTS public_id;
