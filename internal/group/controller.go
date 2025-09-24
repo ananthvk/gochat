@@ -19,13 +19,44 @@ func Routes(g *GroupService) chi.Router {
 }
 
 func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	g.Create(r.Context())
-	helpers.RespondWithJSON(w, 200, map[string]any{"status": "ok", "id": ulid.Make()})
+	createGroupRequest := struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+	}{}
+	err := helpers.ReadJSONBody(r, &createGroupRequest)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "request body malformed", err.Error())
+		return
+	}
+
+	public_id, err := g.Create(r.Context(), createGroupRequest.Name, createGroupRequest.Description)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusInternalServerError, "group not created", err.Error())
+		return
+	}
+	helpers.RespondWithJSON(w, http.StatusCreated, map[string]any{"id": public_id})
 }
 
 func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	g.GetOne(r.Context())
-	helpers.RespondWithJSON(w, 200, map[string]any{"status": "ok"})
+	public_id := chi.URLParam(r, "id")
+	id, err := ulid.Parse(public_id)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "invalid id", err.Error())
+		return
+	}
+	grp, err := g.GetOne(r.Context(), id)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusNotFound, "group not found", err.Error())
+		return
+	}
+	// TODO: A more efficient approach will be to create a response struct then marshal into that, do that later
+
+	helpers.RespondWithJSON(w, 200, map[string]any{
+		"id":          ulid.ULID(grp.PublicID),
+		"created_at":  grp.CreatedAt,
+		"name":        grp.Name,
+		"description": grp.Description,
+	})
 }
 
 func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
