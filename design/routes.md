@@ -9,6 +9,7 @@
 | done   | GET    |`/api/v1/realtime/by-name/{name}` | Returns the room which has the given name, for now rooms have unique names|
 | done   | GET    |`/api/v1/realtime/room` | Returns a list of all the active rooms|
 | todo   | POST   |`/api/v1/groups` | Creates a new group & makes the creating user the admin of the room|
+| todo   | GET    |`/api/v1/groups` | Return all the groups the user is a part of (max limit of 256 groups) |
 | todo   | GET    |`/api/v1/groups/{id}` | Returns details of the group |
 | todo   | DELETE |`/api/v1/groups/{id}` | Deletes the group, it's associated room (if any), and other data related to the room|
 | todo   | PATCH  |`/api/v1/groups/{id}` | Update group details |

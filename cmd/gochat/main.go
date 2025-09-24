@@ -14,6 +14,7 @@ import (
 	"github.com/ananthvk/gochat/internal/app"
 	"github.com/ananthvk/gochat/internal/config"
 	"github.com/ananthvk/gochat/internal/database"
+	"github.com/ananthvk/gochat/internal/group"
 	"github.com/ananthvk/gochat/internal/logging"
 	"github.com/ananthvk/gochat/internal/realtime"
 	"github.com/go-chi/chi/v5"
@@ -68,6 +69,8 @@ func main() {
 
 	rtService := realtime.NewRealtimeService(ctx)
 	dbService, err := database.NewDatabaseService(ctx, cfg)
+	groupService := group.NewGroupService(dbService)
+
 	if err != nil {
 		slog.Error("exiting due to database errors")
 		os.Exit(1)
@@ -78,6 +81,7 @@ func main() {
 		Ctx:             ctx,
 		RealtimeService: rtService,
 		DatabaseService: dbService,
+		GroupService:    groupService,
 		Config:          cfg,
 		Version:         appVersion,
 		StartTime:       startTime,
