@@ -1,4 +1,5 @@
-FROM golang:1.25-bookworm
+# First stage
+FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
@@ -8,6 +9,12 @@ COPY vendor ./vendor
 
 COPY . .
 
-RUN go build -mod vendor -o gochat ./cmd/gochat
+# Setting CGO_ENABLED=0 bundles all the libraries statically when building the executable
+RUN GOOS=linux CGO_ENABLED=0 go build -mod vendor -ldflags="-w -s" -o gochat ./cmd/gochat
 
-CMD ["./gochat"]
+# Second stage
+FROM gcr.io/distroless/static-debian12:nonroot
+
+COPY --from=builder /app/gochat /
+
+CMD ["/gochat"]

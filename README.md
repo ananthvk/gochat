@@ -15,5 +15,11 @@ To run migrations
 migrate -database ${POSTGRESQL_URL} -path internal/database/migrations up
 ```
 
+To run using docker,
+```
+docker run --env-file .env --network host ananthvk0/gochat:0.0.1
+```
+
+
 ## TODO
 - [ ] Clients receive messages from all rooms in the same chat, fix that
