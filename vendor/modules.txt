@@ -1,3 +1,6 @@
+# github.com/caarlos0/env/v11 v11.3.1
+## explicit; go 1.18
+github.com/caarlos0/env/v11
 # github.com/go-chi/chi/v5 v5.2.3
 ## explicit; go 1.20
 github.com/go-chi/chi/v5

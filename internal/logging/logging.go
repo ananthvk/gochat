@@ -5,13 +5,14 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/ananthvk/gochat/internal/config"
 	"github.com/go-chi/httplog/v3"
 	"github.com/go-chi/traceid"
 	"github.com/golang-cz/devslog"
 )
 
-func CreateLoggerAndRequestLoggerMiddleware() (*slog.Logger, func(http.Handler) http.Handler) {
-	isLocalhost := os.Getenv("ENV") == "localhost"
+func CreateLoggerAndRequestLoggerMiddleware(cfg *config.Config) (*slog.Logger, func(http.Handler) http.Handler) {
+	isLocalhost := cfg.Env == "development"
 	logFormat := httplog.SchemaECS.Concise(isLocalhost)
 	logger := slog.New(logHandler(isLocalhost, &slog.HandlerOptions{
 		AddSource:   !isLocalhost,
@@ -23,7 +24,7 @@ func CreateLoggerAndRequestLoggerMiddleware() (*slog.Logger, func(http.Handler) 
 
 func logHandler(isLocalhost bool, handlerOpts *slog.HandlerOptions) slog.Handler {
 	if isLocalhost {
-		// Pretty logs for localhost development.
+		// Pretty logs for development.
 		return devslog.NewHandler(os.Stdout, &devslog.Options{
 			SortKeys:           true,
 			MaxErrorStackTrace: 5,

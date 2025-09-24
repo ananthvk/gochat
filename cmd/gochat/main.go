@@ -2,41 +2,44 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"mime"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/ananthvk/gochat/internal"
 	"github.com/ananthvk/gochat/internal/app"
+	"github.com/ananthvk/gochat/internal/config"
 	"github.com/ananthvk/gochat/internal/logging"
 	"github.com/ananthvk/gochat/internal/realtime"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/traceid"
-	"github.com/joho/godotenv"
 )
 
-func main() {
-	godotenv.Load()
+const appVersion = "0.0.1"
 
-	host, ok := os.LookupEnv("HOST")
-	if !ok {
-		host = "127.0.0.1"
-	}
-	port, ok := os.LookupEnv("PORT")
-	if !ok {
-		port = "8000"
+func main() {
+	startTime := time.Now().UTC()
+	// Load configuration from environment and dotfiles
+	config.LoadEnv()
+	cfg, err := config.ParseConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %s: %s", "Invalid environment variable", err.Error())
+		os.Exit(1)
 	}
 
 	// Set default logger to httplog
-	logger, requestLoggerMiddleware := logging.CreateLoggerAndRequestLoggerMiddleware()
-	if k := os.Getenv("ENV"); k != "localhost" {
+	logger, requestLoggerMiddleware := logging.CreateLoggerAndRequestLoggerMiddleware(cfg)
+	if cfg.Env != "development" {
 		logger = logger.With(
 			slog.String("app", "gochat"),
 			// TODO: Get the version number and running environment automatically
-			slog.String("version", "v0.0.1"),
-			slog.String("env", "production"),
+			slog.String("version", appVersion),
+			slog.String("env", cfg.Env),
 		)
 	}
 	slog.SetDefault(logger)
@@ -60,6 +63,9 @@ func main() {
 	app := &app.App{
 		Ctx:             ctx,
 		RealtimeService: realtime.NewRealtimeService(ctx),
+		Config:          cfg,
+		Version:         appVersion,
+		StartTime:       startTime,
 	}
 
 	app.RealtimeService.StartHubEventLoop()
@@ -70,7 +76,7 @@ func main() {
 	router.Handle("/*", fs)
 
 	server := &http.Server{
-		Addr:    host + ":" + port,
+		Addr:    cfg.Host + ":" + strconv.Itoa(cfg.Port),
 		Handler: router,
 	}
 
