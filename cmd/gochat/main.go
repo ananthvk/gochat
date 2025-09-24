@@ -13,6 +13,7 @@ import (
 	"github.com/ananthvk/gochat/internal"
 	"github.com/ananthvk/gochat/internal/app"
 	"github.com/ananthvk/gochat/internal/config"
+	"github.com/ananthvk/gochat/internal/database"
 	"github.com/ananthvk/gochat/internal/logging"
 	"github.com/ananthvk/gochat/internal/realtime"
 	"github.com/go-chi/chi/v5"
@@ -28,7 +29,7 @@ func main() {
 	config.LoadEnv()
 	cfg, err := config.ParseConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %s: %s", "Invalid environment variable", err.Error())
+		fmt.Fprintf(os.Stderr, "error: %s: %s\n", "Invalid environment variable", err.Error())
 		os.Exit(1)
 	}
 
@@ -45,24 +46,38 @@ func main() {
 	slog.SetDefault(logger)
 	slog.SetLogLoggerLevel(slog.LevelError)
 
-	router := chi.NewRouter()
+	if cfg.Env == "development" {
+		// If in development environment, also log all config values
+		slog.Info("current configuration", "cfg", cfg)
+	}
 
+	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(traceid.Middleware)
 	router.Use(middleware.Recoverer)
 	router.Use(requestLoggerMiddleware)
-
 	router.Use(middleware.Heartbeat("/ping"))
 
 	mime.AddExtensionType(".js", "application/javascript")
 	mime.AddExtensionType(".css", "text/css")
 
+	slog.Info("finished loading middlewares")
+
 	ctx := context.Background()
+
+	rtService := realtime.NewRealtimeService(ctx)
+	dbService, err := database.NewDatabaseService(ctx, cfg)
+	if err != nil {
+		slog.Error("exiting due to database errors")
+		os.Exit(1)
+	}
+	defer dbService.Pool.Close()
 
 	app := &app.App{
 		Ctx:             ctx,
-		RealtimeService: realtime.NewRealtimeService(ctx),
+		RealtimeService: rtService,
+		DatabaseService: dbService,
 		Config:          cfg,
 		Version:         appVersion,
 		StartTime:       startTime,

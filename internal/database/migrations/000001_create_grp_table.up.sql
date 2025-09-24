@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS grp (
+    id BIGSERIAL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT Pk_grp PRIMARY KEY(id)
+)

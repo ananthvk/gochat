@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/google/uuid"
 )
@@ -18,11 +19,13 @@ type RealtimeService struct {
 }
 
 func NewRealtimeService(ctx context.Context) *RealtimeService {
-	return &RealtimeService{
+	rtService := &RealtimeService{
 		rooms: map[string]*room{},
 		hub:   newHub(),
 		ctx:   ctx,
 	}
+	slog.Info("created realtime service")
+	return rtService
 }
 
 // CreateRoom creates a new room, and returns it. If a room with the same name already exists, it returns
