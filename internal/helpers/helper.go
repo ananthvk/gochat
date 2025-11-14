@@ -15,14 +15,14 @@ const (
 	maxRequestJSONBody = 1_000_000 + 1
 )
 
-func RespondWithError(w http.ResponseWriter, code int, err, reason string) {
+func RespondWithError(w http.ResponseWriter, code int, err string, reason any) {
 	if code > 499 {
 		slog.Error("Responding with 5xx error", "code", code, "err", err, "reason", reason, "stack", debug.Stack())
 	}
 	type errResponse struct {
 		StatusMessage string `json:"statusMessage"`
 		Error         string `json:"error"`
-		Reason        string `json:"reason"`
+		Reason        any    `json:"reason"`
 	}
 	RespondWithJSON(w, code, errResponse{http.StatusText(code), err, reason})
 }

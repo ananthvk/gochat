@@ -12,7 +12,7 @@ migrate create -ext sql -dir internal/database/migrations -seq <name>
 
 To run migrations
 ```
-migrate -database ${POSTGRESQL_URL} -path internal/database/migrations up
+migrate -database ${GOCHAT_DB_DSN} -path internal/database/migrations up
 ```
 
 To run using docker,
