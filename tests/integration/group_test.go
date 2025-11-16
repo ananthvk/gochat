@@ -30,8 +30,8 @@ func TestGroup(t *testing.T) {
 			t.Fatalf("Response does not contain valid id field")
 		}
 		dbGrp, _ := app.GroupService.GetOne(context.Background(), ulid.MustParse(groupId))
-		if groupId != ulid.ULID(dbGrp.PublicID).String() {
-			t.Errorf("expected %q, got %q", groupId, dbGrp.PublicID)
+		if groupId != ulid.ULID(dbGrp.ID).String() {
+			t.Errorf("expected %q, got %q", groupId, dbGrp.ID)
 		}
 	})
 

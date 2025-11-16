@@ -12,54 +12,53 @@ import (
 )
 
 const createGroup = `-- name: CreateGroup :one
-INSERT INTO grp (name, description, public_id)
+INSERT INTO grp (id, name, description)
 VALUES ($1, $2, $3)
 RETURNING id
 `
 
 type CreateGroupParams struct {
+	ID          []byte `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	PublicID    []byte `json:"public_id"`
 }
 
-func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createGroup, arg.Name, arg.Description, arg.PublicID)
-	var id int64
+func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, createGroup, arg.ID, arg.Name, arg.Description)
+	var id []byte
 	err := row.Scan(&id)
 	return id, err
 }
 
-const deleteGroupByPublicId = `-- name: DeleteGroupByPublicId :exec
+const deleteGroup = `-- name: DeleteGroup :exec
 DELETE FROM grp
-WHERE public_id = $1
+WHERE id = $1
 `
 
-func (q *Queries) DeleteGroupByPublicId(ctx context.Context, publicID []byte) error {
-	_, err := q.db.Exec(ctx, deleteGroupByPublicId, publicID)
+func (q *Queries) DeleteGroup(ctx context.Context, id []byte) error {
+	_, err := q.db.Exec(ctx, deleteGroup, id)
 	return err
 }
 
-const getGroupByPublicId = `-- name: GetGroupByPublicId :one
-SELECT id, name, description, created_at, public_id FROM grp
-WHERE public_id = $1 LIMIT 1
+const getGroup = `-- name: GetGroup :one
+SELECT name, description, created_at, id FROM grp
+WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetGroupByPublicId(ctx context.Context, publicID []byte) (*Grp, error) {
-	row := q.db.QueryRow(ctx, getGroupByPublicId, publicID)
+func (q *Queries) GetGroup(ctx context.Context, id []byte) (*Grp, error) {
+	row := q.db.QueryRow(ctx, getGroup, id)
 	var i Grp
 	err := row.Scan(
-		&i.ID,
 		&i.Name,
 		&i.Description,
 		&i.CreatedAt,
-		&i.PublicID,
+		&i.ID,
 	)
 	return &i, err
 }
 
 const getGroups = `-- name: GetGroups :many
-SELECT id, name, description, created_at, public_id FROM grp
+SELECT name, description, created_at, id FROM grp
 `
 
 func (q *Queries) GetGroups(ctx context.Context) ([]*Grp, error) {
@@ -72,11 +71,10 @@ func (q *Queries) GetGroups(ctx context.Context) ([]*Grp, error) {
 	for rows.Next() {
 		var i Grp
 		if err := rows.Scan(
-			&i.ID,
 			&i.Name,
 			&i.Description,
 			&i.CreatedAt,
-			&i.PublicID,
+			&i.ID,
 		); err != nil {
 			return nil, err
 		}
@@ -88,30 +86,29 @@ func (q *Queries) GetGroups(ctx context.Context) ([]*Grp, error) {
 	return items, nil
 }
 
-const updateGroupByPublicId = `-- name: UpdateGroupByPublicId :one
+const updateGroupById = `-- name: UpdateGroupById :one
 UPDATE grp 
 SET
     name = coalesce($1, name),
     description = coalesce($2, description)
-WHERE public_id = $3
-RETURNING id, name, description, created_at, public_id
+WHERE id = $3
+RETURNING name, description, created_at, id
 `
 
-type UpdateGroupByPublicIdParams struct {
+type UpdateGroupByIdParams struct {
 	Name        pgtype.Text `json:"name"`
 	Description pgtype.Text `json:"description"`
-	PublicID    []byte      `json:"public_id"`
+	ID          []byte      `json:"id"`
 }
 
-func (q *Queries) UpdateGroupByPublicId(ctx context.Context, arg UpdateGroupByPublicIdParams) (*Grp, error) {
-	row := q.db.QueryRow(ctx, updateGroupByPublicId, arg.Name, arg.Description, arg.PublicID)
+func (q *Queries) UpdateGroupById(ctx context.Context, arg UpdateGroupByIdParams) (*Grp, error) {
+	row := q.db.QueryRow(ctx, updateGroupById, arg.Name, arg.Description, arg.ID)
 	var i Grp
 	err := row.Scan(
-		&i.ID,
 		&i.Name,
 		&i.Description,
 		&i.CreatedAt,
-		&i.PublicID,
+		&i.ID,
 	)
 	return &i, err
 }

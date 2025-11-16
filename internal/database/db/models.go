@@ -9,9 +9,8 @@ import (
 )
 
 type Grp struct {
-	ID          int64              `json:"id"`
 	Name        string             `json:"name"`
 	Description string             `json:"description"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	PublicID    []byte             `json:"public_id"`
+	ID          []byte             `json:"id"`
 }

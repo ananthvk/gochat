@@ -40,17 +40,17 @@ func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	public_id, err := g.Create(r.Context(), grp.Name, grp.Description)
+	id, err := g.Create(r.Context(), grp.Name, grp.Description)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "group not created", err.Error())
 		return
 	}
-	helpers.RespondWithJSON(w, http.StatusCreated, map[string]any{"id": public_id})
+	helpers.RespondWithJSON(w, http.StatusCreated, map[string]any{"id": id})
 }
 
 func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	public_id := chi.URLParam(r, "group_id")
-	id, err := ulid.Parse(public_id)
+	group_id := chi.URLParam(r, "group_id")
+	id, err := ulid.Parse(group_id)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "invalid id", err.Error())
 		return
@@ -61,7 +61,7 @@ func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	helpers.RespondWithJSON(w, 200, GroupResponse{
-		Id:          ulid.ULID(grp.PublicID).String(),
+		Id:          ulid.ULID(grp.ID).String(),
 		CreatedAt:   grp.CreatedAt,
 		Name:        grp.Name,
 		Description: grp.Description,
@@ -69,8 +69,8 @@ func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	public_id := chi.URLParam(r, "group_id")
-	id, err := ulid.Parse(public_id)
+	group_id := chi.URLParam(r, "group_id")
+	id, err := ulid.Parse(group_id)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "invalid id", err.Error())
 		return
@@ -84,8 +84,8 @@ func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	public_id := chi.URLParam(r, "group_id")
-	id, err := ulid.Parse(public_id)
+	group_id := chi.URLParam(r, "group_id")
+	id, err := ulid.Parse(group_id)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "invalid id", err.Error())
 		return
@@ -109,7 +109,7 @@ func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	helpers.RespondWithJSON(w, 200, GroupResponse{
-		Id:          ulid.ULID(grp.PublicID).String(),
+		Id:          ulid.ULID(grp.ID).String(),
 		CreatedAt:   grp.CreatedAt,
 		Name:        grp.Name,
 		Description: grp.Description,
@@ -125,7 +125,7 @@ func handleGetAllGroups(g *GroupService, w http.ResponseWriter, r *http.Request)
 	groups := make([]GroupResponse, len(grps))
 	for i, grp := range grps {
 		groups[i] = GroupResponse{
-			Id:          ulid.ULID(grp.PublicID).String(),
+			Id:          ulid.ULID(grp.ID).String(),
 			CreatedAt:   grp.CreatedAt,
 			Name:        grp.Name,
 			Description: grp.Description,

@@ -26,24 +26,24 @@ func (g *GroupService) Create(ctx context.Context, name, description string) (ul
 	ctx, cancel := context.WithTimeout(ctx, g.Db.QueryTimeout)
 	defer cancel()
 
-	public_id := ulid.Make()
+	id := ulid.Make()
 
 	_, err := g.Db.Queries.CreateGroup(ctx, db.CreateGroupParams{
 		Name:        name,
 		Description: description,
-		PublicID:    public_id[:],
+		ID:          id[:],
 	})
 	if err != nil {
 		slog.ErrorContext(ctx, "internal error while creating group", "error", err)
-		return public_id, err
+		return id, err
 	}
-	return public_id, nil
+	return id, nil
 }
 
-func (g *GroupService) GetOne(ctx context.Context, public_id ulid.ULID) (*db.Grp, error) {
+func (g *GroupService) GetOne(ctx context.Context, id ulid.ULID) (*db.Grp, error) {
 	ctx, cancel := context.WithTimeout(ctx, g.Db.QueryTimeout)
 	defer cancel()
-	grp, err := g.Db.Queries.GetGroupByPublicId(ctx, public_id[:])
+	grp, err := g.Db.Queries.GetGroup(ctx, id[:])
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			slog.ErrorContext(ctx, "internal error while fetching group", "error", err)
@@ -54,10 +54,10 @@ func (g *GroupService) GetOne(ctx context.Context, public_id ulid.ULID) (*db.Grp
 	return grp, nil
 }
 
-func (g *GroupService) Delete(ctx context.Context, public_id ulid.ULID) error {
+func (g *GroupService) Delete(ctx context.Context, id ulid.ULID) error {
 	ctx, cancel := context.WithTimeout(ctx, g.Db.QueryTimeout)
 	defer cancel()
-	err := g.Db.Queries.DeleteGroupByPublicId(ctx, public_id[:])
+	err := g.Db.Queries.DeleteGroup(ctx, id[:])
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			slog.ErrorContext(ctx, "internal error while fetching group", "error", err)
@@ -75,13 +75,13 @@ func deref(s *string) string {
 }
 
 // Updates a group (supports partial updates)
-func (g *GroupService) Update(ctx context.Context, public_id ulid.ULID, req GroupUpdateRequest) (*db.Grp, error) {
+func (g *GroupService) Update(ctx context.Context, id ulid.ULID, req GroupUpdateRequest) (*db.Grp, error) {
 	ctx, cancel := context.WithTimeout(ctx, g.Db.QueryTimeout)
 	defer cancel()
-	group, err := g.Db.Queries.UpdateGroupByPublicId(ctx, db.UpdateGroupByPublicIdParams{
+	group, err := g.Db.Queries.UpdateGroupById(ctx, db.UpdateGroupByIdParams{
 		Name:        pgtype.Text{String: deref(req.Name), Valid: req.Name != nil},
 		Description: pgtype.Text{String: deref(req.Description), Valid: req.Description != nil},
-		PublicID:    public_id[:],
+		ID:          id[:],
 	})
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
