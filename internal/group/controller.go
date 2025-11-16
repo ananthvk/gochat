@@ -5,18 +5,22 @@ import (
 	"net/http"
 
 	"github.com/ananthvk/gochat/internal/helpers"
+	"github.com/ananthvk/gochat/internal/message"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/oklog/ulid/v2"
 )
 
-func Routes(g *GroupService) chi.Router {
+func Routes(g *GroupService, m *message.MessageService) chi.Router {
 	router := chi.NewRouter()
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) { handleGetAllGroups(g, w, r) })
 	router.Post("/", func(w http.ResponseWriter, r *http.Request) { handleCreateGroup(g, w, r) })
-	router.Get("/{id}", func(w http.ResponseWriter, r *http.Request) { handleGetGroup(g, w, r) })
-	router.Delete("/{id}", func(w http.ResponseWriter, r *http.Request) { handleDeleteGroup(g, w, r) })
-	router.Patch("/{id}", func(w http.ResponseWriter, r *http.Request) { handleUpdateGroup(g, w, r) })
+	router.Route("/{group_id}", func(r chi.Router) {
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) { handleGetGroup(g, w, r) })
+		r.Patch("/", func(w http.ResponseWriter, r *http.Request) { handleUpdateGroup(g, w, r) })
+		r.Delete("/", func(w http.ResponseWriter, r *http.Request) { handleDeleteGroup(g, w, r) })
+		r.Mount("/message", message.Routes(m))
+	})
 	return router
 }
 
@@ -45,7 +49,7 @@ func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	public_id := chi.URLParam(r, "id")
+	public_id := chi.URLParam(r, "group_id")
 	id, err := ulid.Parse(public_id)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "invalid id", err.Error())
@@ -65,7 +69,7 @@ func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	public_id := chi.URLParam(r, "id")
+	public_id := chi.URLParam(r, "group_id")
 	id, err := ulid.Parse(public_id)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "invalid id", err.Error())
@@ -80,7 +84,7 @@ func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	public_id := chi.URLParam(r, "id")
+	public_id := chi.URLParam(r, "group_id")
 	id, err := ulid.Parse(public_id)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, "invalid id", err.Error())

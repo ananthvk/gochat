@@ -7,6 +7,7 @@ import (
 	"github.com/ananthvk/gochat/internal/config"
 	"github.com/ananthvk/gochat/internal/database"
 	"github.com/ananthvk/gochat/internal/group"
+	"github.com/ananthvk/gochat/internal/message"
 	"github.com/ananthvk/gochat/internal/realtime"
 )
 
@@ -15,6 +16,7 @@ type App struct {
 	RealtimeService *realtime.RealtimeService
 	DatabaseService *database.DatabaseService
 	GroupService    *group.GroupService
+	MessageService  *message.MessageService
 	Config          *config.Config
 	Version         string
 	StartTime       time.Time

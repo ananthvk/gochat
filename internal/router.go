@@ -14,7 +14,7 @@ import (
 func Routes(app *app.App) chi.Router {
 	router := chi.NewRouter()
 	router.Mount("/realtime", realtime.Routes(app.RealtimeService))
-	router.Mount("/group", group.Routes(app.GroupService))
+	router.Mount("/group", group.Routes(app.GroupService, app.MessageService))
 	router.Get("/health", func(w http.ResponseWriter, r *http.Request) { health.HealthCheckHandler(app, w, r) })
 	return router
 }
