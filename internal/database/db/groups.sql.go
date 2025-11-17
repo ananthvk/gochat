@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkGroupExists = `-- name: CheckGroupExists :one
+SELECT EXISTS(SELECT 1 FROM grp WHERE id = $1) as exists
+`
+
+func (q *Queries) CheckGroupExists(ctx context.Context, id []byte) (bool, error) {
+	row := q.db.QueryRow(ctx, checkGroupExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createGroup = `-- name: CreateGroup :one
 INSERT INTO grp (id, name, description)
 VALUES ($1, $2, $3)

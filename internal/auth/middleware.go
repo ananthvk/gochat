@@ -7,6 +7,8 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
+const HardcodedUserId = "01KA9F0Z000000000000000001"
+
 type ctxKeyUser struct{}
 
 func Authenticate(next http.Handler) http.Handler {

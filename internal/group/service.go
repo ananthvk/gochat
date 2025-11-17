@@ -61,7 +61,7 @@ func (g *GroupService) Delete(ctx context.Context, id ulid.ULID) *errs.Error {
 	err := g.Db.Queries.DeleteGroup(ctx, id[:])
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
-			slog.ErrorContext(ctx, "internal error while fetching group", "error", err)
+			slog.ErrorContext(ctx, "internal error while deleting group", "error", err)
 			return errs.Internal("internal server error while deleting group")
 		}
 	}

@@ -1,0 +1,6 @@
+ALTER TABLE message 
+DROP CONSTRAINT Fk_message_grp;
+
+ALTER TABLE message 
+ADD CONSTRAINT Fk_message_grp 
+FOREIGN KEY (grp_id) REFERENCES grp(id);

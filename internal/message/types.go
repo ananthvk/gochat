@@ -1,0 +1,18 @@
+package message
+
+import "github.com/jackc/pgx/v5/pgtype"
+
+// The content of a message can have atmost 4096 characters
+
+type MessageCreateRequest struct {
+	Type    string `json:"type" validate:"required,oneof=text"`
+	Content string `json:"content" validate:"required,max=4096"`
+}
+
+type MessageResponse struct {
+	Id        string             `json:"id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Type      string             `json:"type"`
+	GrpId     string             `json:"group_id"`
+	Content   string             `json:"content"`
+}

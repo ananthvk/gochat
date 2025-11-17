@@ -21,3 +21,6 @@ SET
     description = coalesce(sqlc.narg('description'), description)
 WHERE id = sqlc.arg('id')
 RETURNING *;
+
+-- name: CheckGroupExists :one
+SELECT EXISTS(SELECT 1 FROM grp WHERE id = sqlc.arg('id')) as exists;
