@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+
+	"github.com/ananthvk/gochat/internal/errs"
 )
 
 const (
@@ -15,14 +17,26 @@ const (
 	maxRequestJSONBody = 1_000_000 + 1
 )
 
+func RespondWithAppError(w http.ResponseWriter, err *errs.Error) {
+	if err.Status > 499 {
+		slog.Error("Responding with 5xx error", "code", err.Status, "err", err, "kind", err.Kind, "reason", err.Reason, "stack", debug.Stack())
+	}
+	type errResponse struct {
+		Status string `json:"status"`
+		Kind   string `json:"error"`
+		Reason any    `json:"reason"`
+	}
+	RespondWithJSON(w, err.Status, errResponse{http.StatusText(err.Status), err.Kind, err.Reason})
+}
+
 func RespondWithError(w http.ResponseWriter, code int, err string, reason any) {
 	if code > 499 {
 		slog.Error("Responding with 5xx error", "code", code, "err", err, "reason", reason, "stack", debug.Stack())
 	}
 	type errResponse struct {
-		StatusMessage string `json:"statusMessage"`
-		Error         string `json:"error"`
-		Reason        any    `json:"reason"`
+		Status string `json:"status"`
+		Kind   string `json:"error"`
+		Reason any    `json:"reason"`
 	}
 	RespondWithJSON(w, code, errResponse{http.StatusText(code), err, reason})
 }

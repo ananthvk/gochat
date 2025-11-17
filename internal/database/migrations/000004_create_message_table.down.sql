@@ -1,0 +1,7 @@
+ALTER TABLE message DROP CONSTRAINT IF EXISTS Fk_message_grp;
+
+ALTER TABLE message DROP CONSTRAINT IF EXISTS Pk_message;
+
+DROP INDEX IF EXISTS idx_message_grp_id;
+
+DROP TABLE IF EXISTS message;

@@ -14,3 +14,11 @@ type Grp struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	ID          []byte             `json:"id"`
 }
+
+type Message struct {
+	ID        []byte             `json:"id"`
+	Type      string             `json:"type"`
+	GrpID     []byte             `json:"grp_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Content   string             `json:"content"`
+}

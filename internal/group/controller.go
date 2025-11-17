@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ananthvk/gochat/internal/errs"
 	"github.com/ananthvk/gochat/internal/helpers"
 	"github.com/ananthvk/gochat/internal/message"
 	"github.com/go-chi/chi/v5"
@@ -28,7 +29,7 @@ func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 	grp := GroupCreateRequest{}
 	err := helpers.ReadJSONBody(r, &grp)
 	if err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "request body malformed", err.Error())
+		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrBadRequest, err.Error())
 		return
 	}
 
@@ -36,13 +37,13 @@ func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 	err = validate.Struct(grp)
 	if err != nil {
 		errors := err.(validator.ValidationErrors)
-		helpers.RespondWithError(w, http.StatusUnprocessableEntity, "validation failed", fmt.Sprintf("%s", errors))
+		helpers.RespondWithError(w, http.StatusUnprocessableEntity, errs.ErrValidationFailed, fmt.Sprintf("%s", errors))
 		return
 	}
 
-	id, err := g.Create(r.Context(), grp.Name, grp.Description)
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, "group not created", err.Error())
+	id, appErr := g.Create(r.Context(), grp.Name, grp.Description)
+	if appErr != nil {
+		helpers.RespondWithAppError(w, appErr)
 		return
 	}
 	helpers.RespondWithJSON(w, http.StatusCreated, map[string]any{"id": id})
@@ -52,12 +53,12 @@ func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
 	group_id := chi.URLParam(r, "group_id")
 	id, err := ulid.Parse(group_id)
 	if err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "invalid id", err.Error())
+		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, err.Error())
 		return
 	}
-	grp, err := g.GetOne(r.Context(), id)
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusNotFound, "group not found", err.Error())
+	grp, appErr := g.GetOne(r.Context(), id)
+	if appErr != nil {
+		helpers.RespondWithAppError(w, appErr)
 		return
 	}
 	helpers.RespondWithJSON(w, 200, GroupResponse{
@@ -72,12 +73,12 @@ func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 	group_id := chi.URLParam(r, "group_id")
 	id, err := ulid.Parse(group_id)
 	if err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "invalid id", err.Error())
+		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, err.Error())
 		return
 	}
-	err = g.Delete(r.Context(), id)
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, "delete failed", err.Error())
+	appErr := g.Delete(r.Context(), id)
+	if appErr != nil {
+		helpers.RespondWithAppError(w, appErr)
 		return
 	}
 	helpers.RespondWithJSON(w, 200, map[string]any{"deleted": true})
@@ -87,25 +88,25 @@ func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 	group_id := chi.URLParam(r, "group_id")
 	id, err := ulid.Parse(group_id)
 	if err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "invalid id", err.Error())
+		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, err.Error())
 		return
 	}
 	req := GroupUpdateRequest{}
 	err = helpers.ReadJSONBody(r, &req)
 	if err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "request body malformed", err.Error())
+		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrBadRequest, err.Error())
 		return
 	}
 	validate := validator.New(validator.WithRequiredStructEnabled())
 	err = validate.Struct(req)
 	if err != nil {
 		errors := err.(validator.ValidationErrors)
-		helpers.RespondWithError(w, http.StatusUnprocessableEntity, "validation failed", fmt.Sprintf("%s", errors))
+		helpers.RespondWithError(w, http.StatusUnprocessableEntity, errs.ErrValidationFailed, fmt.Sprintf("%s", errors))
 		return
 	}
-	grp, err := g.Update(r.Context(), id, req)
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "error while updating group", err.Error())
+	grp, appErr := g.Update(r.Context(), id, req)
+	if appErr != nil {
+		helpers.RespondWithAppError(w, appErr)
 		return
 	}
 	helpers.RespondWithJSON(w, 200, GroupResponse{
@@ -119,7 +120,7 @@ func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 func handleGetAllGroups(g *GroupService, w http.ResponseWriter, r *http.Request) {
 	grps, err := g.GetAll(r.Context())
 	if err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, "error getting records", err.Error())
+		helpers.RespondWithAppError(w, err)
 		return
 	}
 	groups := make([]GroupResponse, len(grps))
