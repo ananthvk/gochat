@@ -20,6 +20,11 @@ To run using docker,
 docker run --env-file .env --network host ananthvk0/gochat:0.0.1
 ```
 
+```
+$ docker volume create pg_data
+$ docker run -e POSTGRES_PASSWORD=dev -p 0.0.0.0:5432:5432 -v pg_data:/var/lib/postgresql/data postgres:16-alpine
+```
+
 
 ## TODO
 - [ ] Clients receive messages from all rooms in the same chat, fix that

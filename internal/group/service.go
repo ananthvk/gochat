@@ -23,7 +23,7 @@ func NewGroupService(databaseService *database.DatabaseService) *GroupService {
 	}
 }
 
-func (g *GroupService) Create(ctx context.Context, name, description string) (ulid.ULID, *errs.Error) {
+func (g *GroupService) Create(ctx context.Context, name, description string, userId ulid.ULID) (ulid.ULID, *errs.Error) {
 	ctx, cancel := context.WithTimeout(ctx, g.Db.QueryTimeout)
 	defer cancel()
 
@@ -41,7 +41,7 @@ func (g *GroupService) Create(ctx context.Context, name, description string) (ul
 	return id, nil
 }
 
-func (g *GroupService) GetOne(ctx context.Context, id ulid.ULID) (*db.Grp, *errs.Error) {
+func (g *GroupService) GetOne(ctx context.Context, id, userId ulid.ULID) (*db.Grp, *errs.Error) {
 	ctx, cancel := context.WithTimeout(ctx, g.Db.QueryTimeout)
 	defer cancel()
 	grp, err := g.Db.Queries.GetGroup(ctx, id[:])
@@ -55,7 +55,7 @@ func (g *GroupService) GetOne(ctx context.Context, id ulid.ULID) (*db.Grp, *errs
 	return grp, nil
 }
 
-func (g *GroupService) Delete(ctx context.Context, id ulid.ULID) *errs.Error {
+func (g *GroupService) Delete(ctx context.Context, id, userId ulid.ULID) *errs.Error {
 	ctx, cancel := context.WithTimeout(ctx, g.Db.QueryTimeout)
 	defer cancel()
 	err := g.Db.Queries.DeleteGroup(ctx, id[:])
@@ -76,7 +76,7 @@ func deref(s *string) string {
 }
 
 // Updates a group (supports partial updates)
-func (g *GroupService) Update(ctx context.Context, id ulid.ULID, req GroupUpdateRequest) (*db.Grp, *errs.Error) {
+func (g *GroupService) Update(ctx context.Context, req GroupUpdateRequest, id, userId ulid.ULID) (*db.Grp, *errs.Error) {
 	ctx, cancel := context.WithTimeout(ctx, g.Db.QueryTimeout)
 	defer cancel()
 	group, err := g.Db.Queries.UpdateGroupById(ctx, db.UpdateGroupByIdParams{
@@ -94,7 +94,7 @@ func (g *GroupService) Update(ctx context.Context, id ulid.ULID, req GroupUpdate
 	return group, nil
 }
 
-func (g *GroupService) GetAll(ctx context.Context) ([]*db.Grp, *errs.Error) {
+func (g *GroupService) GetAll(ctx context.Context, userId ulid.ULID) ([]*db.Grp, *errs.Error) {
 	ctx, cancel := context.WithTimeout(ctx, g.Db.QueryTimeout)
 	defer cancel()
 	grps, err := g.Db.Queries.GetGroups(ctx)

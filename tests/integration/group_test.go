@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/ananthvk/gochat/internal/auth"
 	"github.com/ananthvk/gochat/internal/testutils"
 	"github.com/oklog/ulid/v2"
 )
@@ -29,7 +30,7 @@ func TestGroup(t *testing.T) {
 		if !ok {
 			t.Fatalf("Response does not contain valid id field")
 		}
-		dbGrp, _ := app.GroupService.GetOne(context.Background(), ulid.MustParse(groupId))
+		dbGrp, _ := app.GroupService.GetOne(context.Background(), ulid.MustParse(groupId), ulid.MustParse(auth.HardcodedUserId))
 		if groupId != ulid.ULID(dbGrp.ID).String() {
 			t.Errorf("expected %q, got %q", groupId, dbGrp.ID)
 		}
@@ -78,7 +79,7 @@ func TestGroup(t *testing.T) {
 		testutils.CheckStatusCode(t, resp, http.StatusOK)
 
 		// Verify the update
-		dbGrp, _ := app.GroupService.GetOne(context.Background(), ulid.MustParse(groupId))
+		dbGrp, _ := app.GroupService.GetOne(context.Background(), ulid.MustParse(groupId), ulid.MustParse(auth.HardcodedUserId))
 		if dbGrp.Name != "Updated Name" {
 			t.Errorf("expected name %q, got %q", "Updated Name", dbGrp.Name)
 		}

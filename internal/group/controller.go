@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ananthvk/gochat/internal/auth"
 	"github.com/ananthvk/gochat/internal/errs"
 	"github.com/ananthvk/gochat/internal/helpers"
 	"github.com/ananthvk/gochat/internal/message"
@@ -14,6 +15,7 @@ import (
 
 func Routes(g *GroupService, m *message.MessageService) chi.Router {
 	router := chi.NewRouter()
+	router.Use(auth.Authenticate)
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) { handleGetAllGroups(g, w, r) })
 	router.Post("/", func(w http.ResponseWriter, r *http.Request) { handleCreateGroup(g, w, r) })
 	router.Route("/{group_id}", func(r chi.Router) {
@@ -26,6 +28,11 @@ func Routes(g *GroupService, m *message.MessageService) chi.Router {
 }
 
 func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot create group without login")
+		return
+	}
 	grp := GroupCreateRequest{}
 	err := helpers.ReadJSONBody(r, &grp)
 	if err != nil {
@@ -41,7 +48,7 @@ func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	id, appErr := g.Create(r.Context(), grp.Name, grp.Description)
+	id, appErr := g.Create(r.Context(), grp.Name, grp.Description, user.Id)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -50,13 +57,18 @@ func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot get group without login")
+		return
+	}
 	group_id := chi.URLParam(r, "group_id")
 	id, err := ulid.Parse(group_id)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, err.Error())
 		return
 	}
-	grp, appErr := g.GetOne(r.Context(), id)
+	grp, appErr := g.GetOne(r.Context(), id, user.Id)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -70,13 +82,18 @@ func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot delete group without login")
+		return
+	}
 	group_id := chi.URLParam(r, "group_id")
 	id, err := ulid.Parse(group_id)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, err.Error())
 		return
 	}
-	appErr := g.Delete(r.Context(), id)
+	appErr := g.Delete(r.Context(), id, user.Id)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -85,6 +102,11 @@ func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot update group without login")
+		return
+	}
 	group_id := chi.URLParam(r, "group_id")
 	id, err := ulid.Parse(group_id)
 	if err != nil {
@@ -104,7 +126,7 @@ func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 		helpers.RespondWithError(w, http.StatusUnprocessableEntity, errs.ErrValidationFailed, fmt.Sprintf("%s", errors))
 		return
 	}
-	grp, appErr := g.Update(r.Context(), id, req)
+	grp, appErr := g.Update(r.Context(), req, id, user.Id)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -118,7 +140,12 @@ func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleGetAllGroups(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	grps, err := g.GetAll(r.Context())
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot get all groups without login")
+		return
+	}
+	grps, err := g.GetAll(r.Context(), user.Id)
 	if err != nil {
 		helpers.RespondWithAppError(w, err)
 		return
