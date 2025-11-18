@@ -1,8 +1,6 @@
 package message
 
-import (
-	"github.com/jackc/pgx/v5/pgtype"
-)
+import "time"
 
 // The content of a message can have atmost 4096 characters
 
@@ -17,11 +15,11 @@ type Cursor struct {
 }
 
 type MessageResponse struct {
-	Id        string             `json:"id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	Type      string             `json:"type"`
-	GrpId     string             `json:"group_id"`
-	Content   string             `json:"content"`
+	Id        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	Type      string    `json:"type"`
+	GrpId     string    `json:"group_id"`
+	Content   string    `json:"content"`
 }
 
 type MessagePaginationResponse struct {

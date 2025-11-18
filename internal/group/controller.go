@@ -75,7 +75,7 @@ func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
 	}
 	helpers.RespondWithJSON(w, 200, GroupResponse{
 		Id:          ulid.ULID(grp.ID).String(),
-		CreatedAt:   grp.CreatedAt,
+		CreatedAt:   grp.CreatedAt.Time,
 		Name:        grp.Name,
 		Description: grp.Description,
 	})
@@ -133,7 +133,7 @@ func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 	}
 	helpers.RespondWithJSON(w, 200, GroupResponse{
 		Id:          ulid.ULID(grp.ID).String(),
-		CreatedAt:   grp.CreatedAt,
+		CreatedAt:   grp.CreatedAt.Time,
 		Name:        grp.Name,
 		Description: grp.Description,
 	})
@@ -154,7 +154,7 @@ func handleGetAllGroups(g *GroupService, w http.ResponseWriter, r *http.Request)
 	for i, grp := range grps {
 		groups[i] = GroupResponse{
 			Id:          ulid.ULID(grp.ID).String(),
-			CreatedAt:   grp.CreatedAt,
+			CreatedAt:   grp.CreatedAt.Time,
 			Name:        grp.Name,
 			Description: grp.Description,
 		}

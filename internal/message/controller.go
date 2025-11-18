@@ -48,7 +48,7 @@ func handleGetMessage(m *MessageService, w http.ResponseWriter, r *http.Request)
 
 	msg := MessageResponse{
 		Id:        ulid.ULID(message.ID[:]).String(),
-		CreatedAt: message.CreatedAt,
+		CreatedAt: message.CreatedAt.Time,
 		Type:      message.Type,
 		Content:   message.Content,
 		GrpId:     ulid.ULID(message.GrpID).String(),
@@ -116,7 +116,7 @@ func handleGetMessages(m *MessageService, w http.ResponseWriter, r *http.Request
 	for i, message := range msgs {
 		messages[i] = MessageResponse{
 			Id:        ulid.ULID(message.ID[:]).String(),
-			CreatedAt: message.CreatedAt,
+			CreatedAt: message.CreatedAt.Time,
 			Type:      message.Type,
 			Content:   message.Content,
 			GrpId:     ulid.ULID(message.GrpID).String(),

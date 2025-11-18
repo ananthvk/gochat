@@ -1,6 +1,8 @@
 package group
 
-import "github.com/jackc/pgx/v5/pgtype"
+import (
+	"time"
+)
 
 type GroupCreateRequest struct {
 	Name        string `json:"name" validate:"required,min=3"`
@@ -13,8 +15,8 @@ type GroupUpdateRequest struct {
 }
 
 type GroupResponse struct {
-	Id          string             `json:"id"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	Name        string             `json:"name"`
-	Description string             `json:"description"`
+	Id          string    `json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
 }

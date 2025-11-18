@@ -6,4 +6,5 @@ ALTER TABLE grp RENAME COLUMN public_id TO id;
 
 ALTER TABLE grp ADD CONSTRAINT pk_grp PRIMARY KEY (id);
 
-ALTER INDEX IF EXISTS idx_public_id RENAME TO idx_grp_id;
+-- Redundant since primary key constraint creates an index
+DROP INDEX IF EXISTS idx_public_id;
