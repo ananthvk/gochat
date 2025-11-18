@@ -81,11 +81,22 @@ func (q *Queries) GetMessage(ctx context.Context, arg GetMessageParams) (*Messag
 
 const getMessagesInGroup = `-- name: GetMessagesInGroup :many
 SELECT id, type, grp_id, created_at, content FROM message
-WHERE grp_id = $1
+WHERE
+    grp_id = $1
+AND
+    ($2::bytea IS NULL OR id < $2::bytea)
+ORDER BY id DESC
+LIMIT $3
 `
 
-func (q *Queries) GetMessagesInGroup(ctx context.Context, grpID []byte) ([]*Message, error) {
-	rows, err := q.db.Query(ctx, getMessagesInGroup, grpID)
+type GetMessagesInGroupParams struct {
+	GrpID  []byte `json:"grp_id"`
+	Before []byte `json:"before"`
+	Limit  int32  `json:"limit"`
+}
+
+func (q *Queries) GetMessagesInGroup(ctx context.Context, arg GetMessagesInGroupParams) ([]*Message, error) {
+	rows, err := q.db.Query(ctx, getMessagesInGroup, arg.GrpID, arg.Before, arg.Limit)
 	if err != nil {
 		return nil, err
 	}

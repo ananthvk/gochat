@@ -8,7 +8,12 @@ LIMIT 1;
 
 -- name: GetMessagesInGroup :many
 SELECT * FROM message
-WHERE grp_id = sqlc.arg('grp_id');
+WHERE
+    grp_id = sqlc.arg('grp_id')
+AND
+    (sqlc.narg('before')::bytea IS NULL OR id < sqlc.narg('before')::bytea)
+ORDER BY id DESC
+LIMIT sqlc.arg('limit');
 
 -- name: DeleteMessage :exec
 DELETE FROM message

@@ -38,24 +38,41 @@ func (m *MessageService) GetOne(ctx context.Context, messageId ulid.ULID, groupI
 	return grp, nil
 }
 
-func (m *MessageService) GetAll(ctx context.Context, groupId, userId ulid.ULID) ([]*db.Message, *errs.Error) {
+func (m *MessageService) GetAll(ctx context.Context, pagination Pagination, groupId, userId ulid.ULID) ([]*db.Message, bool, *errs.Error) {
+	hasMoreBefore := false
 	ctx, cancel := context.WithTimeout(ctx, m.Db.QueryTimeout)
 	defer cancel()
 
 	// Note: TOCTOU bug is present, but there's no harm since this is not critical
 	exists, err := m.Db.Queries.CheckGroupExists(ctx, groupId[:])
 	if err != nil {
-		return nil, errs.Internal("internal error while fetching messages")
+		return nil, hasMoreBefore, errs.Internal("internal error while fetching messages")
 	}
 	if !exists {
-		return nil, errs.NotFound("group does not exist")
+		return nil, hasMoreBefore, errs.NotFound("group does not exist")
 	}
 
-	grps, err := m.Db.Queries.GetMessagesInGroup(ctx, groupId[:])
-	if err != nil {
-		return nil, errs.Internal("internal server error while fetching messages")
+	var beforeBytes []byte
+	if pagination.Before != nil {
+		beforeBytes = pagination.Before[:]
 	}
-	return grps, nil
+
+	grps, err := m.Db.Queries.GetMessagesInGroup(ctx, db.GetMessagesInGroupParams{
+		GrpID:  groupId[:],
+		Before: beforeBytes,
+		Limit:  int32(pagination.Limit + 1),
+	})
+	if err != nil {
+		slog.Error("internal server error", "errror", err.Error())
+		return nil, hasMoreBefore, errs.Internal("internal server error while fetching messages")
+	}
+
+	// If we could retrieve limit + 1 rows, it means that hasBefore should be set to true
+	if len(grps) == (pagination.Limit + 1) {
+		hasMoreBefore = true
+		grps = grps[:pagination.Limit]
+	}
+	return grps, hasMoreBefore, nil
 }
 
 func (m *MessageService) Delete(ctx context.Context, messageId, groupId, userId ulid.ULID) *errs.Error {

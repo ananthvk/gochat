@@ -1,6 +1,8 @@
 package message
 
-import "github.com/jackc/pgx/v5/pgtype"
+import (
+	"github.com/jackc/pgx/v5/pgtype"
+)
 
 // The content of a message can have atmost 4096 characters
 
@@ -9,10 +11,20 @@ type MessageCreateRequest struct {
 	Content string `json:"content" validate:"required,max=4096"`
 }
 
+type Cursor struct {
+	Before    string `json:"before"`
+	HasBefore bool   `json:"has_before"`
+}
+
 type MessageResponse struct {
 	Id        string             `json:"id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	Type      string             `json:"type"`
 	GrpId     string             `json:"group_id"`
 	Content   string             `json:"content"`
+}
+
+type MessagePaginationResponse struct {
+	Cursor    Cursor          `json:"cursor"`
+	Messsages MessageResponse `json:"messages"`
 }

@@ -102,7 +102,12 @@ func handleGetMessages(m *MessageService, w http.ResponseWriter, r *http.Request
 		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, "invalid group_id")
 		return
 	}
-	msgs, appErr := m.GetAll(r.Context(), groupId, user.Id)
+	pagination, err := readPagination(r.URL.Query())
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusUnprocessableEntity, errs.ErrValidationFailed, fmt.Sprintf("%s", err))
+		return
+	}
+	msgs, hasMoreBefore, appErr := m.GetAll(r.Context(), pagination, groupId, user.Id)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -117,7 +122,17 @@ func handleGetMessages(m *MessageService, w http.ResponseWriter, r *http.Request
 			GrpId:     ulid.ULID(message.GrpID).String(),
 		}
 	}
-	helpers.RespondWithJSON(w, 200, map[string]any{"messages": messages})
+	beforeId := ""
+	if len(messages) > 0 {
+		beforeId = ulid.ULID(msgs[len(msgs)-1].ID).String()
+	}
+	helpers.RespondWithJSON(w, 200, map[string]any{
+		"messages": messages,
+		"cursor": Cursor{
+			Before:    beforeId,
+			HasBefore: hasMoreBefore,
+		},
+	})
 }
 
 func handleDeleteMessage(m *MessageService, w http.ResponseWriter, r *http.Request) {
