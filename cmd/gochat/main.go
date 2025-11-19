@@ -12,6 +12,7 @@ import (
 
 	"github.com/ananthvk/gochat/internal"
 	"github.com/ananthvk/gochat/internal/app"
+	"github.com/ananthvk/gochat/internal/auth"
 	"github.com/ananthvk/gochat/internal/config"
 	"github.com/ananthvk/gochat/internal/database"
 	"github.com/ananthvk/gochat/internal/group"
@@ -72,6 +73,7 @@ func main() {
 	dbService, err := database.NewDatabaseService(ctx, cfg)
 	groupService := group.NewGroupService(dbService)
 	mesageService := message.NewMessageService(dbService)
+	authService := auth.NewAuthService(dbService)
 
 	if err != nil {
 		slog.Error("exiting due to database errors")
@@ -85,6 +87,7 @@ func main() {
 		DatabaseService: dbService,
 		GroupService:    groupService,
 		MessageService:  mesageService,
+		AuthService:     authService,
 		Config:          cfg,
 		Version:         appVersion,
 		StartTime:       startTime,

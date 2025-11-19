@@ -22,3 +22,13 @@ type Message struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	Content   string             `json:"content"`
 }
+
+type Usr struct {
+	ID        []byte             `json:"id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Name      string             `json:"name"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	Password  []byte             `json:"password"`
+	Activated bool               `json:"activated"`
+}

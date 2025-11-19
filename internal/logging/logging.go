@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/ananthvk/gochat/internal/config"
 	"github.com/go-chi/httplog/v3"
@@ -18,7 +19,7 @@ func CreateLoggerAndRequestLoggerMiddleware(cfg *config.Config) (*slog.Logger, f
 		AddSource:   !isLocalhost,
 		ReplaceAttr: logFormat.ReplaceAttr,
 	}))
-	middleware := createRequestLoggerMiddleware(logger, logFormat)
+	middleware := createRequestLoggerMiddleware(logger, logFormat, cfg)
 	return logger, middleware
 }
 
@@ -40,7 +41,8 @@ func logHandler(isLocalhost bool, handlerOpts *slog.HandlerOptions) slog.Handler
 }
 
 // Returns a middleware that logs requests
-func createRequestLoggerMiddleware(logger *slog.Logger, logFormat *httplog.Schema) func(http.Handler) http.Handler {
+func createRequestLoggerMiddleware(logger *slog.Logger, logFormat *httplog.Schema, cfg *config.Config) func(http.Handler) http.Handler {
+	isLocalhost := cfg.Env == "development"
 	return httplog.RequestLogger(logger, &httplog.Options{
 		// Level defines the verbosity of the request logs:
 		// slog.LevelDebug - log all responses (incl. OPTIONS)
@@ -73,8 +75,16 @@ func createRequestLoggerMiddleware(logger *slog.Logger, logFormat *httplog.Schem
 
 		// Log all requests with invalid payload as curl command.
 		LogExtraAttrs: func(req *http.Request, reqBody string, respStatus int) []slog.Attr {
+			// Only print curl command in development mode
+			if !isLocalhost {
+				return nil
+			}
 			if respStatus == 400 || respStatus == 422 {
 				req.Header.Del("Authorization")
+				// If it's signup URL, don't log curl command since it contains the password in the body
+				if strings.Contains(req.URL.String(), "signup") {
+					return nil
+				}
 				return []slog.Attr{slog.String("curl", httplog.CURL(req, reqBody))}
 			}
 			return nil

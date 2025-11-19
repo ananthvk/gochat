@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/ananthvk/gochat/internal/auth"
 	"github.com/ananthvk/gochat/internal/config"
 	"github.com/ananthvk/gochat/internal/database"
 	"github.com/ananthvk/gochat/internal/group"
@@ -17,6 +18,7 @@ type App struct {
 	DatabaseService *database.DatabaseService
 	GroupService    *group.GroupService
 	MessageService  *message.MessageService
+	AuthService     *auth.AuthService
 	Config          *config.Config
 	Version         string
 	StartTime       time.Time
