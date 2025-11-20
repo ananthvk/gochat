@@ -6,6 +6,10 @@ WHERE email = sqlc.arg('email') LIMIT 1;
 SELECT * FROM usr
 WHERE username = sqlc.arg('username') LIMIT 1;
 
+-- name: GetUserById :one
+SELECT * FROM usr
+where id = sqlc.arg('id') limit 1;
+
 -- name: CreateUser :one
 INSERT INTO usr (id, name, username, email, password, activated)
 VALUES (

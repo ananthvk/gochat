@@ -12,9 +12,9 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
-func Routes(m *MessageService) chi.Router {
+func Routes(m *MessageService, authMW func(http.Handler) http.Handler) chi.Router {
 	router := chi.NewRouter()
-	router.Use(auth.Authenticate)
+	router.Use(authMW)
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) { handleGetMessages(m, w, r) })
 	router.Post("/", func(w http.ResponseWriter, r *http.Request) { handleCreateMessage(m, w, r) })
 	router.Route("/{message_id}", func(r chi.Router) {
@@ -25,7 +25,7 @@ func Routes(m *MessageService) chi.Router {
 }
 
 func handleGetMessage(m *MessageService, w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.UserFromContext(r.Context())
+	userId, ok := auth.UserIdFromContext(r.Context())
 	if !ok {
 		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot get message without login")
 		return
@@ -40,7 +40,7 @@ func handleGetMessage(m *MessageService, w http.ResponseWriter, r *http.Request)
 		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, "invalid message_id")
 		return
 	}
-	message, appErr := m.GetOne(r.Context(), messageId, groupId, user.Id)
+	message, appErr := m.GetOne(r.Context(), messageId, groupId, userId)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -58,7 +58,7 @@ func handleGetMessage(m *MessageService, w http.ResponseWriter, r *http.Request)
 }
 
 func handleCreateMessage(m *MessageService, w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.UserFromContext(r.Context())
+	userId, ok := auth.UserIdFromContext(r.Context())
 	if !ok {
 		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot create message without login")
 		return
@@ -83,7 +83,7 @@ func handleCreateMessage(m *MessageService, w http.ResponseWriter, r *http.Reque
 		helpers.RespondWithError(w, http.StatusUnprocessableEntity, errs.ErrValidationFailed, fmt.Sprintf("%s", errors))
 		return
 	}
-	id, appErr := m.Create(r.Context(), message.Type, message.Content, groupId, user.Id)
+	id, appErr := m.Create(r.Context(), message.Type, message.Content, groupId, userId)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -92,7 +92,7 @@ func handleCreateMessage(m *MessageService, w http.ResponseWriter, r *http.Reque
 }
 
 func handleGetMessages(m *MessageService, w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.UserFromContext(r.Context())
+	userId, ok := auth.UserIdFromContext(r.Context())
 	if !ok {
 		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot view messages without login")
 		return
@@ -107,7 +107,7 @@ func handleGetMessages(m *MessageService, w http.ResponseWriter, r *http.Request
 		helpers.RespondWithError(w, http.StatusUnprocessableEntity, errs.ErrValidationFailed, fmt.Sprintf("%s", err))
 		return
 	}
-	msgs, hasMoreBefore, appErr := m.GetAll(r.Context(), pagination, groupId, user.Id)
+	msgs, hasMoreBefore, appErr := m.GetAll(r.Context(), pagination, groupId, userId)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -136,7 +136,7 @@ func handleGetMessages(m *MessageService, w http.ResponseWriter, r *http.Request
 }
 
 func handleDeleteMessage(m *MessageService, w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.UserFromContext(r.Context())
+	userId, ok := auth.UserIdFromContext(r.Context())
 	if !ok {
 		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot delete message without login")
 		return
@@ -151,7 +151,7 @@ func handleDeleteMessage(m *MessageService, w http.ResponseWriter, r *http.Reque
 		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, "invalid message_id")
 		return
 	}
-	appErr := m.Delete(r.Context(), messageId, groupId, user.Id)
+	appErr := m.Delete(r.Context(), messageId, groupId, userId)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return

@@ -13,22 +13,22 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
-func Routes(g *GroupService, m *message.MessageService) chi.Router {
+func Routes(g *GroupService, m *message.MessageService, authMW func(http.Handler) http.Handler) chi.Router {
 	router := chi.NewRouter()
-	router.Use(auth.Authenticate)
+	router.Use(authMW)
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) { handleGetAllGroups(g, w, r) })
 	router.Post("/", func(w http.ResponseWriter, r *http.Request) { handleCreateGroup(g, w, r) })
 	router.Route("/{group_id}", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) { handleGetGroup(g, w, r) })
 		r.Patch("/", func(w http.ResponseWriter, r *http.Request) { handleUpdateGroup(g, w, r) })
 		r.Delete("/", func(w http.ResponseWriter, r *http.Request) { handleDeleteGroup(g, w, r) })
-		r.Mount("/message", message.Routes(m))
+		r.Mount("/message", message.Routes(m, authMW))
 	})
 	return router
 }
 
 func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.UserFromContext(r.Context())
+	userId, ok := auth.UserIdFromContext(r.Context())
 	if !ok {
 		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot create group without login")
 		return
@@ -48,7 +48,7 @@ func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	id, appErr := g.Create(r.Context(), grp.Name, grp.Description, user.Id)
+	id, appErr := g.Create(r.Context(), grp.Name, grp.Description, userId)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -57,7 +57,7 @@ func handleCreateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.UserFromContext(r.Context())
+	userId, ok := auth.UserIdFromContext(r.Context())
 	if !ok {
 		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot get group without login")
 		return
@@ -68,7 +68,7 @@ func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
 		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, err.Error())
 		return
 	}
-	grp, appErr := g.GetOne(r.Context(), id, user.Id)
+	grp, appErr := g.GetOne(r.Context(), id, userId)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -82,7 +82,7 @@ func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
 }
 
 func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.UserFromContext(r.Context())
+	userId, ok := auth.UserIdFromContext(r.Context())
 	if !ok {
 		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot delete group without login")
 		return
@@ -93,7 +93,7 @@ func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, err.Error())
 		return
 	}
-	appErr := g.Delete(r.Context(), id, user.Id)
+	appErr := g.Delete(r.Context(), id, userId)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -102,7 +102,7 @@ func handleDeleteGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.UserFromContext(r.Context())
+	userId, ok := auth.UserIdFromContext(r.Context())
 	if !ok {
 		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot update group without login")
 		return
@@ -126,7 +126,7 @@ func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 		helpers.RespondWithError(w, http.StatusUnprocessableEntity, errs.ErrValidationFailed, fmt.Sprintf("%s", errors))
 		return
 	}
-	grp, appErr := g.Update(r.Context(), req, id, user.Id)
+	grp, appErr := g.Update(r.Context(), req, id, userId)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
@@ -140,12 +140,12 @@ func handleUpdateGroup(g *GroupService, w http.ResponseWriter, r *http.Request) 
 }
 
 func handleGetAllGroups(g *GroupService, w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.UserFromContext(r.Context())
+	userId, ok := auth.UserIdFromContext(r.Context())
 	if !ok {
 		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot get all groups without login")
 		return
 	}
-	grps, err := g.GetAll(r.Context(), user.Id)
+	grps, err := g.GetAll(r.Context(), userId)
 	if err != nil {
 		helpers.RespondWithAppError(w, err)
 		return

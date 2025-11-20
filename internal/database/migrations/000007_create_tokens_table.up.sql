@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS token (
+    hash BYTEA,
+    usr_id BYTEA nOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(), 
+    expiry TIMESTAMP WITH TIME ZONE NOT NULL,
+    scope TEXT NOT NULL,
+    
+    CONSTRAINT Fk_token_usr FOREIGN KEY (usr_id) REFERENCES usr(id) ON DELETE CASCADE,
+    CONSTRAINT Pk_token PRIMARY KEY(hash)
+);

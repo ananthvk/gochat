@@ -19,6 +19,7 @@ import (
 	"github.com/ananthvk/gochat/internal/logging"
 	"github.com/ananthvk/gochat/internal/message"
 	"github.com/ananthvk/gochat/internal/realtime"
+	"github.com/ananthvk/gochat/internal/token"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/traceid"
@@ -73,7 +74,9 @@ func main() {
 	dbService, err := database.NewDatabaseService(ctx, cfg)
 	groupService := group.NewGroupService(dbService)
 	mesageService := message.NewMessageService(dbService)
-	authService := auth.NewAuthService(dbService)
+	tokenService := token.NewTokenService(dbService)
+	authService := auth.NewAuthService(dbService, tokenService)
+	authMW := auth.AuthMiddleware(tokenService)
 
 	if err != nil {
 		slog.Error("exiting due to database errors")
@@ -87,6 +90,7 @@ func main() {
 		DatabaseService: dbService,
 		GroupService:    groupService,
 		MessageService:  mesageService,
+		TokenService:    tokenService,
 		AuthService:     authService,
 		Config:          cfg,
 		Version:         appVersion,
@@ -95,7 +99,7 @@ func main() {
 
 	app.RealtimeService.StartHubEventLoop()
 
-	router.Mount("/api/v1/", internal.Routes(app))
+	router.Mount("/api/v1/", internal.Routes(app, authMW))
 
 	fs := http.FileServer(http.Dir("./static"))
 	router.Handle("/*", fs)

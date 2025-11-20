@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/ananthvk/gochat/internal/errs"
@@ -10,9 +11,15 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func Routes(a *AuthService) chi.Router {
+func Routes(a *AuthService, authMW func(http.Handler) http.Handler) chi.Router {
 	router := chi.NewRouter()
 	router.Post("/signup", func(w http.ResponseWriter, r *http.Request) { handleCreateUser(a, w, r) })
+	router.Post("/login", func(w http.ResponseWriter, r *http.Request) { handleLoginUserEmail(a, w, r) })
+	router.Group(func(r chi.Router) {
+		r.Use(authMW)
+		r.Get("/me", func(w http.ResponseWriter, r *http.Request) { handleGetUserInfo(a, w, r) })
+		r.Get("/logout", func(w http.ResponseWriter, r *http.Request) { handleLogout(a, w, r) })
+	})
 	return router
 }
 
@@ -47,4 +54,56 @@ func handleCreateUser(a *AuthService, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	helpers.RespondWithJSON(w, 200, map[string]any{"user": user})
+}
+
+func handleLoginUserEmail(a *AuthService, w http.ResponseWriter, r *http.Request) {
+	usr := struct {
+		Email    string `json:"email" validate:"required,email"`
+		Password string `json:"password" validate:"required,min=8,max=72"`
+	}{}
+	if err := helpers.ReadJSONBody(r, &usr); err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrBadRequest, err.Error())
+		return
+	}
+	v := validator.New(validator.WithRequiredStructEnabled())
+	err := v.Struct(usr)
+	if err != nil {
+		helpers.RespondWithAppError(w, errs.ValidationFailed(fmt.Sprintf("%s", err.(validator.ValidationErrors))))
+		return
+	}
+	token, appErr := a.LoginByEmail(r.Context(), usr.Email, usr.Password)
+	if appErr != nil {
+		helpers.RespondWithAppError(w, appErr)
+		return
+	}
+	helpers.RespondWithJSON(w, 200, map[string]any{"authenticate": token})
+}
+
+func handleGetUserInfo(a *AuthService, w http.ResponseWriter, r *http.Request) {
+	userId, ok := UserIdFromContext(r.Context())
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot get profile info without login")
+		return
+	}
+	usr, appErr := a.GetUserById(r.Context(), userId)
+	if appErr != nil {
+		helpers.RespondWithAppError(w, appErr)
+		return
+	}
+	helpers.RespondWithJSON(w, 200, map[string]any{"user": usr})
+}
+
+func handleLogout(a *AuthService, w http.ResponseWriter, r *http.Request) {
+	token, ok := PlaintextTokenFromContext(r.Context())
+	if !ok {
+		slog.ErrorContext(r.Context(), "error getting token from context")
+		helpers.RespondWithAppError(w, errs.Internal("internal server error while logging out"))
+		return
+	}
+	appErr := a.tokenService.DeleteByPlaintextToken(r.Context(), token)
+	if appErr != nil {
+		helpers.RespondWithAppError(w, appErr)
+		return
+	}
+	helpers.RespondWithJSON(w, 200, map[string]any{"logout": true})
 }

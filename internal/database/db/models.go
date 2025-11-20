@@ -23,6 +23,14 @@ type Message struct {
 	Content   string             `json:"content"`
 }
 
+type Token struct {
+	Hash      []byte             `json:"hash"`
+	UsrID     []byte             `json:"usr_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Expiry    pgtype.Timestamptz `json:"expiry"`
+	Scope     string             `json:"scope"`
+}
+
 type Usr struct {
 	ID        []byte             `json:"id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
