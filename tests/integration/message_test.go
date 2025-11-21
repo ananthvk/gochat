@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/ananthvk/gochat/internal/auth"
 	"github.com/ananthvk/gochat/internal/testutils"
 	"github.com/oklog/ulid/v2"
 )
@@ -15,8 +14,11 @@ func TestMessage(t *testing.T) {
 	defer srv.Close()
 	defer cancel()
 
+	req := testutils.AuthenticatedRequest{}
+	req.GetAuth(t, srv)
+
 	// Create a group first for message testing
-	createGroupResp := testutils.MakePostRequest(t, srv, "/api/v1/group", map[string]any{
+	createGroupResp := req.MakeAuthenticatedPostRequest(t, srv, "/api/v1/group", map[string]any{
 		"name":        "Message Test Group",
 		"description": "Group for testing message functionality",
 	})
@@ -27,7 +29,7 @@ func TestMessage(t *testing.T) {
 	groupId := createGroupData["id"].(string)
 
 	t.Run("TestMessageCreation", func(t *testing.T) {
-		resp := testutils.MakePostRequest(t, srv, "/api/v1/group/"+groupId+"/message", map[string]any{
+		resp := req.MakeAuthenticatedPostRequest(t, srv, "/api/v1/group/"+groupId+"/message", map[string]any{
 			"content": "Hello, this is a test message!",
 			"type":    "text",
 		})
@@ -40,7 +42,7 @@ func TestMessage(t *testing.T) {
 		if !ok {
 			t.Fatalf("Response does not contain valid id field")
 		}
-		dbMsg, _ := app.MessageService.GetOne(context.Background(), ulid.MustParse(messageId), ulid.MustParse(groupId), ulid.MustParse(auth.HardcodedUserId))
+		dbMsg, _ := app.MessageService.GetOne(context.Background(), ulid.MustParse(messageId), ulid.MustParse(groupId), ulid.MustParse(req.UserId))
 		if messageId != ulid.ULID(dbMsg.ID).String() {
 			t.Errorf("expected %q, got %q", messageId, dbMsg.ID)
 		}
@@ -48,7 +50,7 @@ func TestMessage(t *testing.T) {
 
 	t.Run("TestMessageFetch", func(t *testing.T) {
 		// Create a message first
-		createResp := testutils.MakePostRequest(t, srv, "/api/v1/group/"+groupId+"/message", map[string]any{
+		createResp := req.MakeAuthenticatedPostRequest(t, srv, "/api/v1/group/"+groupId+"/message", map[string]any{
 			"content": "Fetch test message",
 			"type":    "text",
 		})
@@ -59,7 +61,7 @@ func TestMessage(t *testing.T) {
 		messageId := createData["id"].(string)
 
 		// Fetch the message
-		resp := testutils.MakeGetRequest(t, srv, "/api/v1/group/"+groupId+"/message/"+messageId)
+		resp := req.MakeAuthenticatedGetRequest(t, srv, "/api/v1/group/"+groupId+"/message/"+messageId)
 		testutils.CheckStatusCode(t, resp, http.StatusOK)
 
 		respData := map[string]any{}
@@ -72,7 +74,7 @@ func TestMessage(t *testing.T) {
 
 	t.Run("TestMessageDelete", func(t *testing.T) {
 		// Create a message first
-		createResp := testutils.MakePostRequest(t, srv, "/api/v1/group/"+groupId+"/message", map[string]any{
+		createResp := req.MakeAuthenticatedPostRequest(t, srv, "/api/v1/group/"+groupId+"/message", map[string]any{
 			"content": "Message to delete",
 			"type":    "text",
 		})
@@ -83,18 +85,18 @@ func TestMessage(t *testing.T) {
 		messageId := createData["id"].(string)
 
 		// Delete the message
-		resp := testutils.MakeDeleteRequest(t, srv, "/api/v1/group/"+groupId+"/message/"+messageId)
+		resp := req.MakeAuthenticatedDeleteRequest(t, srv, "/api/v1/group/"+groupId+"/message/"+messageId)
 		testutils.CheckStatusCode(t, resp, http.StatusOK)
 
 		// Verify deletion by attempting to fetch
-		fetchResp := testutils.MakeGetRequest(t, srv, "/api/v1/group/"+groupId+"/message/"+messageId)
+		fetchResp := req.MakeAuthenticatedGetRequest(t, srv, "/api/v1/group/"+groupId+"/message/"+messageId)
 		testutils.CheckStatusCode(t, fetchResp, http.StatusNotFound)
 	})
 
 	t.Run("TestMessageListByGroup", func(t *testing.T) {
 		// Create multiple messages in the same group
 		for i := 0; i < 3; i++ {
-			createResp := testutils.MakePostRequest(t, srv, "/api/v1/group/"+groupId+"/message", map[string]any{
+			createResp := req.MakeAuthenticatedPostRequest(t, srv, "/api/v1/group/"+groupId+"/message", map[string]any{
 				"content": "List test message " + string(rune(i+'1')),
 				"type":    "text",
 			})
@@ -102,7 +104,7 @@ func TestMessage(t *testing.T) {
 		}
 
 		// List messages by group
-		resp := testutils.MakeGetRequest(t, srv, "/api/v1/group/"+groupId+"/message")
+		resp := req.MakeAuthenticatedGetRequest(t, srv, "/api/v1/group/"+groupId+"/message")
 		testutils.CheckStatusCode(t, resp, http.StatusOK)
 
 		respData := map[string]any{}

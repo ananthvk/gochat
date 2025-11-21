@@ -10,11 +10,14 @@ import (
 
 	"github.com/ananthvk/gochat/internal"
 	"github.com/ananthvk/gochat/internal/app"
+	"github.com/ananthvk/gochat/internal/auth"
 	"github.com/ananthvk/gochat/internal/config"
 	"github.com/ananthvk/gochat/internal/database"
 	"github.com/ananthvk/gochat/internal/group"
 	"github.com/ananthvk/gochat/internal/message"
+	"github.com/ananthvk/gochat/internal/middleware"
 	"github.com/ananthvk/gochat/internal/realtime"
+	"github.com/ananthvk/gochat/internal/token"
 	"github.com/go-chi/chi/v5"
 	_ "github.com/jackc/pgx/v5"
 	"github.com/testcontainers/testcontainers-go"
@@ -59,18 +62,6 @@ func (td *TestDatabase) Close(ctx context.Context) error {
 	return nil
 }
 
-func newTestServer(t *testing.T, ctx context.Context) (*app.App, *chi.Mux) {
-	t.Helper()
-	router := chi.NewRouter()
-	app := &app.App{
-		Ctx:             ctx,
-		RealtimeService: realtime.NewRealtimeService(ctx),
-	}
-	app.RealtimeService.StartHubEventLoop()
-	router.Mount("/api/v1/", internal.Routes(app))
-	return app, router
-}
-
 func newTestServerWithDatabase(t *testing.T, ctx context.Context) (*app.App, *chi.Mux, *TestDatabase) {
 	t.Helper()
 
@@ -87,9 +78,14 @@ func newTestServerWithDatabase(t *testing.T, ctx context.Context) (*app.App, *ch
 	}
 
 	rtService := realtime.NewRealtimeService(ctx)
-	dbService, _ := database.NewDatabaseService(ctx, cfg)
+	dbService, err := database.NewDatabaseService(ctx, cfg)
+	if err != nil {
+		log.Fatalf("could not create database service %s", err)
+	}
 	groupService := group.NewGroupService(dbService)
 	mesageService := message.NewMessageService(dbService)
+	tokenService := token.NewTokenService(dbService)
+	authService := auth.NewAuthService(dbService, tokenService)
 
 	time.Sleep(50 * time.Millisecond)
 	// Run migrations
@@ -104,20 +100,16 @@ func newTestServerWithDatabase(t *testing.T, ctx context.Context) (*app.App, *ch
 		DatabaseService: dbService,
 		GroupService:    groupService,
 		MessageService:  mesageService,
+		AuthService:     authService,
+		TokenService:    tokenService,
 		Config:          cfg,
 	}
 	app.RealtimeService.StartHubEventLoop()
-	router.Mount("/api/v1/", internal.Routes(app))
-
+	middlewares := middleware.Middlewares{
+		Authenticate: auth.AuthMiddleware(tokenService),
+	}
+	router.Mount("/api/v1/", internal.Routes(app, middlewares))
 	return app, router, testDB
-}
-
-func NewTestServerWithCancel(t *testing.T) (*app.App, *httptest.Server, context.CancelFunc) {
-	t.Helper()
-	ctx, cancel := context.WithCancel(context.Background())
-	app, router := newTestServer(t, ctx)
-	srv := httptest.NewServer(router)
-	return app, srv, cancel
 }
 
 func NewTestServerWithDatabaseAndCancel(t *testing.T) (*app.App, *httptest.Server, *TestDatabase, context.CancelFunc) {

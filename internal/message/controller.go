@@ -7,14 +7,15 @@ import (
 	"github.com/ananthvk/gochat/internal/auth"
 	"github.com/ananthvk/gochat/internal/errs"
 	"github.com/ananthvk/gochat/internal/helpers"
+	"github.com/ananthvk/gochat/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/oklog/ulid/v2"
 )
 
-func Routes(m *MessageService, authMW func(http.Handler) http.Handler) chi.Router {
+func Routes(m *MessageService, middlewares middleware.Middlewares) chi.Router {
 	router := chi.NewRouter()
-	router.Use(authMW)
+	router.Use(middlewares.Authenticate)
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) { handleGetMessages(m, w, r) })
 	router.Post("/", func(w http.ResponseWriter, r *http.Request) { handleCreateMessage(m, w, r) })
 	router.Route("/{message_id}", func(r chi.Router) {

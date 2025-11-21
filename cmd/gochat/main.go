@@ -14,12 +14,8 @@ import (
 	"github.com/ananthvk/gochat/internal/app"
 	"github.com/ananthvk/gochat/internal/auth"
 	"github.com/ananthvk/gochat/internal/config"
-	"github.com/ananthvk/gochat/internal/database"
-	"github.com/ananthvk/gochat/internal/group"
 	"github.com/ananthvk/gochat/internal/logging"
-	"github.com/ananthvk/gochat/internal/message"
-	"github.com/ananthvk/gochat/internal/realtime"
-	"github.com/ananthvk/gochat/internal/token"
+	mid "github.com/ananthvk/gochat/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/traceid"
@@ -70,36 +66,19 @@ func main() {
 
 	ctx := context.Background()
 
-	rtService := realtime.NewRealtimeService(ctx)
-	dbService, err := database.NewDatabaseService(ctx, cfg)
-	groupService := group.NewGroupService(dbService)
-	mesageService := message.NewMessageService(dbService)
-	tokenService := token.NewTokenService(dbService)
-	authService := auth.NewAuthService(dbService, tokenService)
-	authMW := auth.AuthMiddleware(tokenService)
-
+	app, err := app.NewApp(ctx, cfg, appVersion)
 	if err != nil {
-		slog.Error("exiting due to database errors")
-		os.Exit(1)
+		slog.Error("exiting since app could not be created", "error", err)
 	}
-	defer dbService.Pool.Close()
-
-	app := &app.App{
-		Ctx:             ctx,
-		RealtimeService: rtService,
-		DatabaseService: dbService,
-		GroupService:    groupService,
-		MessageService:  mesageService,
-		TokenService:    tokenService,
-		AuthService:     authService,
-		Config:          cfg,
-		Version:         appVersion,
-		StartTime:       startTime,
-	}
-
+	app.StartTime = startTime
 	app.RealtimeService.StartHubEventLoop()
+	defer app.DatabaseService.Pool.Close()
 
-	router.Mount("/api/v1/", internal.Routes(app, authMW))
+	middleware := mid.Middlewares{
+		Authenticate: auth.AuthMiddleware(app.TokenService),
+	}
+
+	router.Mount("/api/v1/", internal.Routes(app, middleware))
 
 	fs := http.FileServer(http.Dir("./static"))
 	router.Handle("/*", fs)
