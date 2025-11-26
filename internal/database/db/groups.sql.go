@@ -23,8 +23,8 @@ func (q *Queries) CheckGroupExists(ctx context.Context, id []byte) (bool, error)
 }
 
 const createGroup = `-- name: CreateGroup :one
-INSERT INTO grp (id, name, description)
-VALUES ($1, $2, $3)
+INSERT INTO grp (id, name, description, owner_id)
+VALUES ($1, $2, $3, $4)
 RETURNING id
 `
 
@@ -32,10 +32,16 @@ type CreateGroupParams struct {
 	ID          []byte `json:"id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
+	OwnerID     []byte `json:"owner_id"`
 }
 
 func (q *Queries) CreateGroup(ctx context.Context, arg CreateGroupParams) ([]byte, error) {
-	row := q.db.QueryRow(ctx, createGroup, arg.ID, arg.Name, arg.Description)
+	row := q.db.QueryRow(ctx, createGroup,
+		arg.ID,
+		arg.Name,
+		arg.Description,
+		arg.OwnerID,
+	)
 	var id []byte
 	err := row.Scan(&id)
 	return id, err
@@ -52,7 +58,7 @@ func (q *Queries) DeleteGroup(ctx context.Context, id []byte) error {
 }
 
 const getGroup = `-- name: GetGroup :one
-SELECT name, description, created_at, id FROM grp
+SELECT name, description, created_at, id, owner_id FROM grp
 WHERE id = $1 LIMIT 1
 `
 
@@ -64,28 +70,50 @@ func (q *Queries) GetGroup(ctx context.Context, id []byte) (*Grp, error) {
 		&i.Description,
 		&i.CreatedAt,
 		&i.ID,
+		&i.OwnerID,
 	)
 	return &i, err
 }
 
 const getGroups = `-- name: GetGroups :many
-SELECT name, description, created_at, id FROM grp
+SELECT 
+    g.name, g.description, g.created_at, g.id, g.owner_id,
+    mem.role,
+    mem.joined_at 
+FROM grp AS g
+INNER JOIN grp_membership AS mem
+    ON g.id = mem.grp_id
+WHERE mem.usr_id  = $1
 `
 
-func (q *Queries) GetGroups(ctx context.Context) ([]*Grp, error) {
-	rows, err := q.db.Query(ctx, getGroups)
+type GetGroupsRow struct {
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ID          []byte             `json:"id"`
+	OwnerID     []byte             `json:"owner_id"`
+	Role        string             `json:"role"`
+	JoinedAt    pgtype.Timestamptz `json:"joined_at"`
+}
+
+// Returns detailed information about all groups the user is part of
+func (q *Queries) GetGroups(ctx context.Context, usrID []byte) ([]*GetGroupsRow, error) {
+	rows, err := q.db.Query(ctx, getGroups, usrID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []*Grp
+	var items []*GetGroupsRow
 	for rows.Next() {
-		var i Grp
+		var i GetGroupsRow
 		if err := rows.Scan(
 			&i.Name,
 			&i.Description,
 			&i.CreatedAt,
 			&i.ID,
+			&i.OwnerID,
+			&i.Role,
+			&i.JoinedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -103,7 +131,7 @@ SET
     name = coalesce($1, name),
     description = coalesce($2, description)
 WHERE id = $3
-RETURNING name, description, created_at, id
+RETURNING name, description, created_at, id, owner_id
 `
 
 type UpdateGroupByIdParams struct {
@@ -120,6 +148,7 @@ func (q *Queries) UpdateGroupById(ctx context.Context, arg UpdateGroupByIdParams
 		&i.Description,
 		&i.CreatedAt,
 		&i.ID,
+		&i.OwnerID,
 	)
 	return &i, err
 }

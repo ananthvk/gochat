@@ -9,24 +9,31 @@ import (
 	"github.com/ananthvk/gochat/internal/database"
 	"github.com/ananthvk/gochat/internal/database/db"
 	"github.com/ananthvk/gochat/internal/errs"
+	"github.com/ananthvk/gochat/internal/membership"
 	"github.com/oklog/ulid/v2"
 )
 
 const MessageTypeText = "text"
 
 type MessageService struct {
-	Db database.DatabaseService
+	Db *database.DatabaseService
 }
 
 func NewMessageService(databaseService *database.DatabaseService) *MessageService {
 	return &MessageService{
-		Db: *databaseService,
+		Db: databaseService,
 	}
 }
 
 func (m *MessageService) GetOne(ctx context.Context, messageId ulid.ULID, groupId, userId ulid.ULID) (*db.Message, *errs.Error) {
 	ctx, cancel := context.WithTimeout(ctx, m.Db.QueryTimeout)
 	defer cancel()
+
+	appErr := membership.IsUserMemberOfGroup(m.Db, ctx, groupId, userId)
+	if appErr != nil {
+		return nil, appErr
+	}
+
 	grp, err := m.Db.Queries.GetMessage(ctx, db.GetMessageParams{ID: messageId[:], GrpID: groupId[:]})
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
@@ -44,12 +51,10 @@ func (m *MessageService) GetAll(ctx context.Context, pagination Pagination, grou
 	defer cancel()
 
 	// Note: TOCTOU bug is present, but there's no harm since this is not critical
-	exists, err := m.Db.Queries.CheckGroupExists(ctx, groupId[:])
-	if err != nil {
-		return nil, hasMoreBefore, errs.Internal("internal error while fetching messages")
-	}
-	if !exists {
-		return nil, hasMoreBefore, errs.NotFound("group does not exist")
+	// If membership is valid, it means that the group exist, so no need to check for it separately
+	appErr := membership.IsUserMemberOfGroup(m.Db, ctx, groupId, userId)
+	if appErr != nil {
+		return nil, hasMoreBefore, appErr
 	}
 
 	var beforeBytes []byte
@@ -78,6 +83,11 @@ func (m *MessageService) GetAll(ctx context.Context, pagination Pagination, grou
 func (m *MessageService) Delete(ctx context.Context, messageId, groupId, userId ulid.ULID) *errs.Error {
 	ctx, cancel := context.WithTimeout(ctx, m.Db.QueryTimeout)
 	defer cancel()
+
+	appErr := membership.IsUserMemberOfGroup(m.Db, ctx, groupId, userId)
+	if appErr != nil {
+		return appErr
+	}
 	err := m.Db.Queries.DeleteMessage(ctx, db.DeleteMessageParams{ID: messageId[:], GrpID: groupId[:]})
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
@@ -92,6 +102,11 @@ func (m *MessageService) Create(ctx context.Context, messageType string, content
 	ctx, cancel := context.WithTimeout(ctx, m.Db.QueryTimeout)
 	defer cancel()
 	id := ulid.Make()
+
+	appErr := membership.IsUserMemberOfGroup(m.Db, ctx, groupId, userId)
+	if appErr != nil {
+		return ulid.ULID{}, appErr
+	}
 
 	_, err := m.Db.Queries.CreateMessage(ctx, db.CreateMessageParams{
 		Type:    messageType,

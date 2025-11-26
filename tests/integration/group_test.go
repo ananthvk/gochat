@@ -104,7 +104,7 @@ func TestGroup(t *testing.T) {
 
 		// Verify deletion by attempting to fetch
 		fetchResp := req.MakeAuthenticatedGetRequest(t, srv, "/api/v1/group/"+groupId)
-		testutils.CheckStatusCode(t, fetchResp, http.StatusNotFound)
+		testutils.CheckStatusCode(t, fetchResp, http.StatusForbidden)
 	})
 
 	t.Run("TestGroupListAll", func(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/ananthvk/gochat/internal/helpers"
 )
@@ -105,18 +106,21 @@ func MakePatchRequest(t *testing.T, server *httptest.Server, path string, body a
 }
 
 type AuthenticatedRequest struct {
-	UserId string
-	Token  string
+	UserId   string
+	Token    string
+	Username string
+	Email    string
 }
 
 // GetAuth should be called on a newly created AuthenticatedRequest instance, it registers a new user using /signup and sets the returned token so that
 // authenticated requests can be made
 func (a *AuthenticatedRequest) GetAuth(t *testing.T, server *httptest.Server) {
 	t.Helper()
+	currentTime := time.Now().Format("20060102150405")
 	resp := MakePostRequest(t, server, "/api/v1/auth/signup", map[string]any{
 		"name":     "A Test User",
-		"email":    "test@example.com",
-		"username": "test_user",
+		"email":    "test" + currentTime + "@example.com",
+		"username": "test_user" + currentTime,
 		"password": "testuser123",
 	})
 	if resp.StatusCode != http.StatusCreated {
@@ -144,6 +148,8 @@ func (a *AuthenticatedRequest) GetAuth(t *testing.T, server *httptest.Server) {
 	// Set the user id
 	a.UserId = signup.User.ID
 	a.Token = signup.Token.Token
+	a.Email = signup.User.Email
+	a.Username = signup.User.Username
 }
 
 // MakeAuthenticatedPostRequest creates a POST request with JSON body and Authorization header

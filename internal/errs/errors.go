@@ -25,6 +25,7 @@ const (
 	ErrBadRequest       = "bad_request"
 	ErrValidationFailed = "validation_failed"
 	ErrInternal         = "internal_error"
+	ErrUnauthorized     = "not_authorized"
 )
 
 func NotFound(reason string) *Error {
@@ -33,6 +34,10 @@ func NotFound(reason string) *Error {
 
 func NotAuthenticated(reason string) *Error {
 	return &Error{Kind: ErrNotAuthenticated, Status: http.StatusUnauthorized, Reason: reason}
+}
+
+func NotAuthorized(reason string) *Error {
+	return &Error{Kind: ErrUnauthorized, Status: http.StatusForbidden, Reason: reason}
 }
 
 func InvalidID(reason string) *Error {

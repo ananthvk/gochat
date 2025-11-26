@@ -13,6 +13,14 @@ type Grp struct {
 	Description string             `json:"description"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	ID          []byte             `json:"id"`
+	OwnerID     []byte             `json:"owner_id"`
+}
+
+type GrpMembership struct {
+	GrpID    []byte             `json:"grp_id"`
+	UsrID    []byte             `json:"usr_id"`
+	Role     string             `json:"role"`
+	JoinedAt pgtype.Timestamptz `json:"joined_at"`
 }
 
 type Message struct {

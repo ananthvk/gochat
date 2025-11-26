@@ -2,12 +2,20 @@
 SELECT * FROM grp
 WHERE id = sqlc.arg('id') LIMIT 1;
 
+-- Returns detailed information about all groups the user is part of
 -- name: GetGroups :many
-SELECT * FROM grp;
+SELECT 
+    g.*,
+    mem.role,
+    mem.joined_at 
+FROM grp AS g
+INNER JOIN grp_membership AS mem
+    ON g.id = mem.grp_id
+WHERE mem.usr_id  = sqlc.arg('usr_id');
 
 -- name: CreateGroup :one
-INSERT INTO grp (id, name, description)
-VALUES (sqlc.narg('id'), sqlc.arg('name'), sqlc.arg('description'))
+INSERT INTO grp (id, name, description, owner_id)
+VALUES (sqlc.arg('id'), sqlc.arg('name'), sqlc.arg('description'), sqlc.arg('owner_id'))
 RETURNING id;
 
 -- name: DeleteGroup :exec

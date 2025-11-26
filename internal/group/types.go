@@ -16,7 +16,14 @@ type GroupUpdateRequest struct {
 
 type GroupResponse struct {
 	Id          string    `json:"id"`
+	OwnerId     string    `json:"owner_id"`
 	CreatedAt   time.Time `json:"created_at"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
+}
+
+type MemberResponse struct {
+	UsrId    string    `json:"usr_id"`
+	JoinedAt time.Time `json:"joined_at"`
+	Role     string    `json:"role"`
 }

@@ -28,3 +28,4 @@ $ docker run -e POSTGRES_PASSWORD=dev -p 0.0.0.0:5432:5432 -v pg_data:/var/lib/p
 
 ## TODO
 - [ ] Clients receive messages from all rooms in the same chat, fix that
+- [ ] Implement a resource scoped RBAC instead of only checking for membership

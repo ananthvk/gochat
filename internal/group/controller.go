@@ -23,6 +23,8 @@ func Routes(g *GroupService, m *message.MessageService, middlewares middleware.M
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) { handleGetGroup(g, w, r) })
 		r.Patch("/", func(w http.ResponseWriter, r *http.Request) { handleUpdateGroup(g, w, r) })
 		r.Delete("/", func(w http.ResponseWriter, r *http.Request) { handleDeleteGroup(g, w, r) })
+		r.Put("/member", func(w http.ResponseWriter, r *http.Request) { handleJoinGroup(g, w, r) })
+		r.Get("/member", func(w http.ResponseWriter, r *http.Request) { handleGetMembers(g, w, r) })
 		r.Mount("/message", message.Routes(m, middlewares))
 	})
 	return router
@@ -79,6 +81,7 @@ func handleGetGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   grp.CreatedAt.Time,
 		Name:        grp.Name,
 		Description: grp.Description,
+		OwnerId:     ulid.ULID(grp.OwnerID).String(),
 	})
 }
 
@@ -158,7 +161,57 @@ func handleGetAllGroups(g *GroupService, w http.ResponseWriter, r *http.Request)
 			CreatedAt:   grp.CreatedAt.Time,
 			Name:        grp.Name,
 			Description: grp.Description,
+			OwnerId:     ulid.ULID(grp.OwnerID).String(),
 		}
 	}
 	helpers.RespondWithJSON(w, 200, map[string]any{"groups": groups})
+}
+
+// Adds the currently authenticated user to the group
+func handleJoinGroup(g *GroupService, w http.ResponseWriter, r *http.Request) {
+	userId, ok := auth.UserIdFromContext(r.Context())
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot join group without login")
+		return
+	}
+	group_id := chi.URLParam(r, "group_id")
+	id, err := ulid.Parse(group_id)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, err.Error())
+		return
+	}
+	appErr := g.AddMemberToGroup(r.Context(), id, userId)
+	if appErr != nil {
+		helpers.RespondWithAppError(w, appErr)
+		return
+	}
+	helpers.RespondWithJSON(w, 200, map[string]any{"status": true})
+}
+
+func handleGetMembers(g *GroupService, w http.ResponseWriter, r *http.Request) {
+	userId, ok := auth.UserIdFromContext(r.Context())
+	if !ok {
+		helpers.RespondWithError(w, http.StatusUnauthorized, errs.ErrNotAuthenticated, "cannot list group members without login")
+		return
+	}
+	group_id := chi.URLParam(r, "group_id")
+	id, err := ulid.Parse(group_id)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, errs.ErrInvalidID, err.Error())
+		return
+	}
+	members, appErr := g.GetMembers(r.Context(), id, userId)
+	if appErr != nil {
+		helpers.RespondWithAppError(w, appErr)
+		return
+	}
+	mems := make([]MemberResponse, len(members))
+	for i, member := range members {
+		mems[i] = MemberResponse{
+			UsrId:    ulid.ULID(member.UsrID).String(),
+			JoinedAt: member.JoinedAt.Time,
+			Role:     member.Role,
+		}
+	}
+	helpers.RespondWithJSON(w, 200, map[string]any{"members": mems})
 }

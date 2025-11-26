@@ -1,0 +1,7 @@
+DROP INDEX IF EXISTS idx_grp_owner_id;
+
+ALTER TABLE grp
+DROP CONSTRAINT IF EXISTS fk_grp_owner_id;
+
+ALTER TABLE grp
+DROP COLUMN IF EXISTS owner_id;

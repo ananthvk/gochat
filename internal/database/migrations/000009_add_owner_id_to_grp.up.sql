@@ -1,0 +1,9 @@
+ALTER TABLE grp
+ADD COLUMN owner_id BYTEA NOT NULL;
+
+ALTER TABLE grp
+ADD CONSTRAINT fk_grp_owner_id
+FOREIGN KEY (owner_id) REFERENCES usr(id)
+ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS idx_grp_owner_id ON grp(owner_id);
