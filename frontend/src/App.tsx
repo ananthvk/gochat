@@ -1,11 +1,9 @@
 import './App.css'
+import { ChatApp } from './components/ChatApp'
 
 function App() {
-
     return (
-        <h1 className="text-3xl font-bold underline p-6 hover:bg-sky-800">
-            Hello world!
-        </h1>
+        <ChatApp />
     )
 
 }
