@@ -1,5 +1,5 @@
 export function MessagesList() {
-    return <div style={{ backgroundColor: 'pink' }} className="flex-1 p-5">
+    return <div className="flex-1 p-5 bg-blue-50">
         Messages in a group
     </div>
 }

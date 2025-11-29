@@ -69,6 +69,7 @@ func main() {
 	app, err := app.NewApp(ctx, cfg, appVersion)
 	if err != nil {
 		slog.Error("exiting since app could not be created", "error", err)
+		os.Exit(1)
 	}
 	app.StartTime = startTime
 	app.RealtimeService.StartHubEventLoop()
