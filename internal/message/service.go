@@ -109,10 +109,11 @@ func (m *MessageService) Create(ctx context.Context, messageType string, content
 	}
 
 	_, err := m.Db.Queries.CreateMessage(ctx, db.CreateMessageParams{
-		Type:    messageType,
-		Content: content,
-		ID:      id[:],
-		GrpID:   groupId[:],
+		Type:     messageType,
+		Content:  content,
+		ID:       id[:],
+		GrpID:    groupId[:],
+		SenderID: userId[:],
 	})
 	if err != nil {
 		slog.ErrorContext(ctx, "internal error while creating message", "error", err)

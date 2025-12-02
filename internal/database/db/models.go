@@ -29,6 +29,7 @@ type Message struct {
 	GrpID     []byte             `json:"grp_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	Content   string             `json:"content"`
+	SenderID  []byte             `json:"sender_id"`
 }
 
 type Token struct {

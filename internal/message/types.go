@@ -20,6 +20,7 @@ type MessageResponse struct {
 	Type      string    `json:"type"`
 	GrpId     string    `json:"group_id"`
 	Content   string    `json:"content"`
+	SenderId  string    `json:"sender_id"`
 }
 
 type MessagePaginationResponse struct {

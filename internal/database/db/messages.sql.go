@@ -10,16 +10,17 @@ import (
 )
 
 const createMessage = `-- name: CreateMessage :one
-INSERT INTO message (id, type, grp_id, content)
-VALUES ($1, $2, $3, $4)
+INSERT INTO message (id, type, grp_id, content, sender_id)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id
 `
 
 type CreateMessageParams struct {
-	ID      []byte `json:"id"`
-	Type    string `json:"type"`
-	GrpID   []byte `json:"grp_id"`
-	Content string `json:"content"`
+	ID       []byte `json:"id"`
+	Type     string `json:"type"`
+	GrpID    []byte `json:"grp_id"`
+	Content  string `json:"content"`
+	SenderID []byte `json:"sender_id"`
 }
 
 func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) ([]byte, error) {
@@ -28,6 +29,7 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) ([
 		arg.Type,
 		arg.GrpID,
 		arg.Content,
+		arg.SenderID,
 	)
 	var id []byte
 	err := row.Scan(&id)
@@ -53,7 +55,7 @@ func (q *Queries) DeleteMessage(ctx context.Context, arg DeleteMessageParams) er
 }
 
 const getMessage = `-- name: GetMessage :one
-SELECT id, type, grp_id, created_at, content FROM message
+SELECT id, type, grp_id, created_at, content, sender_id FROM message
 WHERE
     id = $1
         AND
@@ -75,12 +77,13 @@ func (q *Queries) GetMessage(ctx context.Context, arg GetMessageParams) (*Messag
 		&i.GrpID,
 		&i.CreatedAt,
 		&i.Content,
+		&i.SenderID,
 	)
 	return &i, err
 }
 
 const getMessagesInGroup = `-- name: GetMessagesInGroup :many
-SELECT id, type, grp_id, created_at, content FROM message
+SELECT id, type, grp_id, created_at, content, sender_id FROM message
 WHERE
     grp_id = $1
 AND
@@ -110,6 +113,7 @@ func (q *Queries) GetMessagesInGroup(ctx context.Context, arg GetMessagesInGroup
 			&i.GrpID,
 			&i.CreatedAt,
 			&i.Content,
+			&i.SenderID,
 		); err != nil {
 			return nil, err
 		}

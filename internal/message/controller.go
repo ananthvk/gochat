@@ -53,6 +53,7 @@ func handleGetMessage(m *MessageService, w http.ResponseWriter, r *http.Request)
 		Type:      message.Type,
 		Content:   message.Content,
 		GrpId:     ulid.ULID(message.GrpID).String(),
+		SenderId:  ulid.ULID(message.SenderID).String(),
 	}
 
 	helpers.RespondWithJSON(w, http.StatusOK, msg)
@@ -121,6 +122,7 @@ func handleGetMessages(m *MessageService, w http.ResponseWriter, r *http.Request
 			Type:      message.Type,
 			Content:   message.Content,
 			GrpId:     ulid.ULID(message.GrpID).String(),
+			SenderId:  ulid.ULID(message.SenderID).String(),
 		}
 	}
 	beforeId := ""
