@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { loginUser, type LoginDetails, type LoginResult, getMe, type MeResult, type MeError } from "../../api/auth"
+import { loginUser, type LoginDetails, type LoginResult, getMe, type MeResult } from "../../api/auth"
+import { type APIError } from '../../api/errors'
 import { useChatStore } from "../store"
 import { useEffect } from "react"
 
@@ -14,7 +15,7 @@ export const useAuthBootstrap = () => {
     const token = localStorage.getItem("session_token")
     const setLoggedIn = useChatStore(state => state.setIsLoggedIn)
     const setLoading = useChatStore(state => state.setAuthLoading)
-    const query = useQuery<MeResult, MeError, MeResult>({
+    const query = useQuery<MeResult, APIError, MeResult>({
         queryKey: ["auth", "me"],
         queryFn: getMe,
         retry: false,

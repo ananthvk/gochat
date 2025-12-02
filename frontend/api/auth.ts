@@ -56,15 +56,7 @@ export type User = {
 export type MeResult = {
     success: boolean,
     user?: User,
-    error: string,
-    errorDetails: any
 }
-export type MeError = {
-    success: boolean,
-    error: string,
-    errorDetails: any
-}
-
 export const getMe = async (): Promise<MeResult> => {
     try {
         const token = localStorage.getItem('session_token')
@@ -85,8 +77,6 @@ export const getMe = async (): Promise<MeResult> => {
         return {
             success: true,
             user: response.data.user,
-            error: "",
-            errorDetails: {}
         }
 
     } catch (error: any) {
