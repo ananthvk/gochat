@@ -43,6 +43,8 @@ export function GroupsList() {
     }
     if (!groups)
         return null;
+    if (Object.keys(groups).length == 0)
+        return <div className="flex flex-row justify-center items-center h-screen font-semibold">You have not joined any groups</div>
     return <div className="flex-1 bg-radial white overflow-y-scroll">
         <ul>
             {

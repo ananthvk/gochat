@@ -68,11 +68,7 @@ export const getMe = async (): Promise<MeResult> => {
             }
         }
 
-        const response = await axiosClient.get('/auth/me', {
-            headers: {
-                Authorization: `Bearer ${token}`
-            }
-        })
+        const response = await axiosClient.get('/auth/me')
 
         return {
             success: true,
@@ -95,5 +91,20 @@ export const getMe = async (): Promise<MeResult> => {
             error: String(errorData.reason) || String(errorData.error) || 'Failed to get user info',
             errorDetails: errorData
         }
+    }
+}
+// This method logs out the user, it always succeeds and never results in an error even if the request fails
+// Irrespective of what happens, the token is removed from local storage
+export const logOut = async () => {
+    const token = localStorage.getItem('session_token')
+    if (!token)
+        return
+    try {
+        await axiosClient.post('/auth/logout')
+    } catch (error: any) {
+
+    } finally {
+        localStorage.removeItem("session_token")
+        localStorage.removeItem("session_expiry")
     }
 }

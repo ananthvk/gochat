@@ -20,7 +20,7 @@ func Routes(a *AuthService, middlewares middleware.Middlewares) chi.Router {
 	router.Group(func(r chi.Router) {
 		r.Use(middlewares.Authenticate)
 		r.Get("/me", func(w http.ResponseWriter, r *http.Request) { handleGetUserInfo(a, w, r) })
-		r.Get("/logout", func(w http.ResponseWriter, r *http.Request) { handleLogout(a, w, r) })
+		r.Post("/logout", func(w http.ResponseWriter, r *http.Request) { handleLogout(a, w, r) })
 	})
 	return router
 }

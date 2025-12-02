@@ -11,6 +11,7 @@ export const useLogin = () => {
     return mutation
 }
 
+
 export const useAuthBootstrap = () => {
     const token = localStorage.getItem("session_token")
     const setLoggedIn = useChatStore(state => state.setIsLoggedIn)
