@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
 import { getGroups, type GroupResult, type Group } from "../../api/group"
 import type { APIError } from '../../api/errors'
+import { useChatStore } from "../store"
 
 export const useGroups = () => {
+    const isLoggedIn = useChatStore((state) => state.isLoggedIn)
     const query = useQuery<GroupResult, APIError, Record<string, Group>>({
         queryKey: ["groups"],
         queryFn: getGroups,
@@ -12,7 +14,8 @@ export const useGroups = () => {
                 acc[g.id] = g
                 return acc
             }, {} as Record<string, Group>)
-        }
+        },
+        enabled: isLoggedIn
     })
     return query
 }

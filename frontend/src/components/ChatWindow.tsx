@@ -13,7 +13,7 @@ export function ChatWindow() {
             </div>
         </div>
     }
-    return <div className="col-span-8 md:col-span-7 flex flex-col">
+    return <div className="col-span-8 md:col-span-7 flex flex-col h-screen">
         <Header />
         <MessagesList />
         <MessageInput />
