@@ -4,10 +4,10 @@ import { create } from "zustand"
 interface Store {
     isLoggedIn: boolean
     selectedGroupId: string
-    authToken: string
-    setAuthToken: (token: string) => void
+    authLoading: boolean
     setIsLoggedIn: (isLoggedIn: boolean) => void
     setSelectedGroupId: (groupId: string) => void
+    setAuthLoading: (value: boolean) => void
 }
 
 interface Group {
@@ -24,11 +24,11 @@ interface GroupStore {
 
 export const useChatStore = create<Store>((set) => ({
     isLoggedIn: false,
-    authToken: "",
+    authLoading: true,
     selectedGroupId: "",
-    setAuthToken: (token: string) => set({ authToken: token }),
     setIsLoggedIn: (isLoggedIn: boolean) => set({ isLoggedIn: isLoggedIn }),
     setSelectedGroupId: (groupId: string) => set({ selectedGroupId: groupId }),
+    setAuthLoading: (value: boolean) => set({ authLoading: value })
 }))
 
 const hardcodedGroups: Record<string, Group> = {
