@@ -1,62 +1,21 @@
-import { useInfiniteQuery, type QueryFunction } from "@tanstack/react-query"
 import { useChatStore } from "../store"
-import { getMessages, type Message, type MessageResult } from "../../api/message"
-import type { APIError } from "../../api/errors";
-import { Loader } from "./Loader";
+import { getMessages, type Message, type PaginationParams } from "../../api/message"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import InfiniteScroll from 'react-infinite-scroll-component';
+import { formatChatTime } from "../lib/formatChatTime";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { Loader } from "./Loader";
+import { SystemMessage } from "./SystemMessage";
 
-const messageLimit = 50
+const defaultMessageFetchLimit = 50;
 
-const getMessagesQueryFn: QueryFunction<
-    MessageResult,
-    [string, string, string],
-    string
-> = async ({ pageParam, queryKey }) => {
-    const [, groupId] = queryKey;
-
-    return getMessages({
-        groupId,
-        before: pageParam ?? "",
-        limit: messageLimit,
-    });
-};
-function formatChatTime(timestamp: string) {
-    const date = new Date(timestamp);
-    const now = new Date();
-
-    const diffMs = now.getTime() - date.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHour = Math.floor(diffMin / 60);
-
-    const isToday =
-        now.getDate() === date.getDate() &&
-        now.getMonth() === date.getMonth() &&
-        now.getFullYear() === date.getFullYear();
-
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    const isYesterday =
-        yesterday.getDate() === date.getDate() &&
-        yesterday.getMonth() === date.getMonth() &&
-        yesterday.getFullYear() === date.getFullYear();
-
-    if (diffSec < 10) return "Just now";
-    if (diffMin < 1) return `${diffSec} sec ago`;
-    if (diffMin < 60) return `${diffMin} min ago`;
-    if (diffHour < 24 && isToday)
-        return date.toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-    if (isYesterday)
-        return `Yesterday ${date.toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-        })}`;
-    // older than yesterday
-    return date.toLocaleDateString("en-US") + " " + date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+const queryFn = async ({ pageParam }: { pageParam?: PaginationParams }) => {
+    if (!pageParam) {
+        pageParam = { before: "", groupId: "", limit: defaultMessageFetchLimit }
+    }
+    const res = await getMessages(pageParam)
+    return res
 }
 
 
@@ -88,66 +47,58 @@ function ChatMessage(message: Message) {
 }
 
 export function MessagesList() {
-    return <div className="flex-1 p-5 overflow-y-auto">
+    // Temporary workaround flex-col-reverse, later make the div scroll to the end
+    return <div id="chatMessages" className="flex-1 p-5 overflow-y-scroll flex flex-col-reverse">
         <InfiniteList />
     </div>
 }
 
 function InfiniteList() {
-    const selectedGroupId = useChatStore((state) => state.selectedGroupId);
-
-    const { data,
-        error,
-        fetchNextPage,
-        hasNextPage,
-        isFetching,
-        isFetchingNextPage,
-        status,
-    } = useInfiniteQuery<
-        MessageResult,
-        APIError,
-        MessageResult,
-        [string, string, string],
-        string
-    >({
+    const selectedGroupId = useChatStore((state) => state.selectedGroupId)
+    const { data, error, fetchNextPage, hasNextPage, status } = useInfiniteQuery({
+        initialPageParam: { before: "", groupId: selectedGroupId, limit: defaultMessageFetchLimit },
         queryKey: ["groups", selectedGroupId, "messages"],
-        queryFn: getMessagesQueryFn,
-        initialPageParam: "",
-        getNextPageParam: (lastPage) => lastPage.cursor.has_before ? lastPage.cursor.before : undefined,
-        refetchOnWindowFocus: false,
-        refetchOnReconnect: false,
-        refetchOnMount: false,
-        // Keep messages cached indefinitely
-        staleTime: Infinity,
-    });
+        queryFn: queryFn,
+        getNextPageParam: (lastPage, _) => {
+            if (!lastPage.cursor.has_before)
+                return undefined
+            return {
+                before: lastPage.cursor.before,
+                limit: defaultMessageFetchLimit,
+                groupId: selectedGroupId
+            }
+        },
+        enabled: selectedGroupId != ""
+    })
+    const messages = data ? data.pages.flatMap(p => p.messages) : []
 
-    return (status === 'pending' ? (
-        <Loader />
-    ) : status === 'error' ? (
-        <p>Error: {error.error}</p>
-    ) : (
-        <div>
-            {((data as any).pages.map((page: any, i: any) => (
-                <div key={i} className="flex flex-col">
-                    {page.messages.map((message: Message) => (
-                        <ChatMessage key={message.id} {...message} />
-                    ))}
-                </div>
-            )))}
-            <div>{isFetching && !isFetchingNextPage ? 'Fetching...' : null}</div>
-            <div>
-                <button
-                    onClick={() => fetchNextPage()}
-                    disabled={!hasNextPage || isFetching}
-                >
-                    {isFetchingNextPage
-                        ? 'Loading more...'
-                        : hasNextPage
-                            ? 'Load More'
-                            : 'Nothing more to load'}
-                </button>
-            </div>
+    if (status === 'pending') {
+        return <div className="justify-self-center self-center">
+            <Loader />
         </div>
-    )
+    }
+    if (status === 'error') {
+        return <p className="text-red-600">Error occured while fetching messages {error.message}</p>
+    }
+
+    if (messages.length === 0) {
+        return (
+            <div className="self-center justify-end"><SystemMessage text="No more messages" /></div>
+        )
+    }
+
+    return (
+        <InfiniteScroll
+            dataLength={messages.length}
+            next={() => fetchNextPage()}
+            hasMore={hasNextPage}
+            loader={<div className="self-center justify-self-center"><Loader /></div>}
+            endMessage={<div className="self-center"><SystemMessage text="No more messages" /></div>}
+            scrollableTarget="chatMessages"
+            inverse={true}
+            className="flex-col-reverse flex"
+        >
+            {messages.map(message => <ChatMessage {...message} key={message.id} />)}
+        </InfiniteScroll>
     )
 }
