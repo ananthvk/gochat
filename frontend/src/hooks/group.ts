@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { getGroups, type GroupResult, type Group } from "../../api/group"
+import { getGroups, type GroupResult, type Group, getGroupMembers, type GroupMember } from "../../api/group"
 import type { APIError } from '../../api/errors'
 import { useChatStore } from "../store"
 
@@ -19,3 +19,21 @@ export const useGroups = () => {
     })
     return query
 }
+
+export const useGroupMembers = (groupId: string) => {
+    return useQuery({
+        queryKey: ["groups", groupId, "members"],
+        queryFn: () => getGroupMembers(groupId),
+        enabled: !!groupId,
+        select: (data) => {
+            const memberMap: Record<string, GroupMember> = {};
+            data.members.forEach(member => {
+                memberMap[member.usr_id] = member;
+            });
+            return memberMap;
+        },
+        // 5 min cache
+        staleTime: 1000 * 60 * 5,
+        refetchOnWindowFocus: false,
+    });
+};

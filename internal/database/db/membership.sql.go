@@ -75,6 +75,50 @@ func (q *Queries) DeleteMembership(ctx context.Context, arg DeleteMembershipPara
 	return err
 }
 
+const getGroupMembersWithName = `-- name: GetGroupMembersWithName :many
+SELECT m.grp_id, m.usr_id, m.role, m.joined_at, u.username, u.name FROM 
+grp_membership AS m 
+INNER JOIN usr AS u
+ON m.usr_id = u.id
+WHERE grp_id = $1
+`
+
+type GetGroupMembersWithNameRow struct {
+	GrpID    []byte             `json:"grp_id"`
+	UsrID    []byte             `json:"usr_id"`
+	Role     string             `json:"role"`
+	JoinedAt pgtype.Timestamptz `json:"joined_at"`
+	Username string             `json:"username"`
+	Name     string             `json:"name"`
+}
+
+func (q *Queries) GetGroupMembersWithName(ctx context.Context, grpID []byte) ([]*GetGroupMembersWithNameRow, error) {
+	rows, err := q.db.Query(ctx, getGroupMembersWithName, grpID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []*GetGroupMembersWithNameRow
+	for rows.Next() {
+		var i GetGroupMembersWithNameRow
+		if err := rows.Scan(
+			&i.GrpID,
+			&i.UsrID,
+			&i.Role,
+			&i.JoinedAt,
+			&i.Username,
+			&i.Name,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, &i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getGroupMemberships = `-- name: GetGroupMemberships :many
 
 SELECT grp_id, usr_id, role, joined_at FROM grp_membership

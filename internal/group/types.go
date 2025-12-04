@@ -27,3 +27,11 @@ type MemberResponse struct {
 	JoinedAt time.Time `json:"joined_at"`
 	Role     string    `json:"role"`
 }
+
+type MemberResponseWithName struct {
+	UsrId    string    `json:"usr_id"`
+	JoinedAt time.Time `json:"joined_at"`
+	Role     string    `json:"role"`
+	Name     string    `json:"name"`
+	Username string    `json:"username"`
+}

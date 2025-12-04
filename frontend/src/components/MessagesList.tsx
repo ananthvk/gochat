@@ -8,6 +8,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { Loader } from "./Loader";
 import { SystemMessage } from "./SystemMessage";
 import { useEffect, useRef } from "react";
+import type { GroupMember } from "../../api/group";
+import { useGroupMembers } from "../hooks/group";
 
 const defaultMessageFetchLimit = 20;
 
@@ -20,7 +22,7 @@ const queryFn = async ({ pageParam }: { pageParam?: PaginationParams }) => {
 }
 
 
-function ChatMessage(message: Message) {
+function ChatMessage({ message, memberMap }: { message: Message, memberMap?: Record<string, GroupMember> }) {
     const currentUserId = useChatStore((state) => state.currentUserId)
     // TODO: Check if it's empty
     let senderIsCurrentUser = false
@@ -32,12 +34,20 @@ function ChatMessage(message: Message) {
     const isSent = (!message.status) || message.status === "sent"
     const isError = message.status === "error"
 
+    const senderName = memberMap?.[message.sender_id]?.name || message.sender_id;
+    const username = memberMap?.[message.sender_id]?.username || message.sender_id;
+
     // TODO: Later map message sender id to username
     return <div className={`p-3 ${senderIsCurrentUser ? "bg-green-100 self-end" : "bg-slate-100"} mb-2 rounded-lg w-fit lg:max-w-6/12 md:max-w-8/12 sm:max-w-10/12 max-w-11/12 shadow-sm`}>
         {senderIsCurrentUser ? <></> :
-            <a className="font-semibold text-slate-900 hover:text-slate-600 transition duration-100">
-                {message.sender_id}
-            </a>
+            <div className="flex flex-row items-center mb-1">
+                <a className="font-semibold text-blue-700 transition duration-100 hover:text-blue-900 hover:font-bold hover:underline hover:cursor-pointer">
+                    {senderName}
+                </a>
+                <a className="font-light text-sm ml-3 text-gray-500 hover:text-gray-800 duration-100 transition">
+                    @{username}
+                </a>
+            </div>
         }
         <p>
             {message.content}
@@ -84,6 +94,7 @@ export function MessagesList({ liveMessages }: { liveMessages: Message[] }) {
 
 function InfiniteList({ liveMessages }: { liveMessages: Message[] }) {
     const selectedGroupId = useChatStore((state) => state.selectedGroupId)
+    const { data: memberMap } = useGroupMembers(selectedGroupId);
     const { data, error, fetchNextPage, hasNextPage, status } = useInfiniteQuery({
         initialPageParam: { before: "", groupId: selectedGroupId, limit: defaultMessageFetchLimit },
         queryKey: ["groups", selectedGroupId, "messages"],
@@ -134,12 +145,12 @@ function InfiniteList({ liveMessages }: { liveMessages: Message[] }) {
         >
             <div className="flex flex-col">
                 {liveMessages.map(message => (
-                    <ChatMessage {...message} key={message.id || `live-${message.created_at}`} />
+                    <ChatMessage message={message} key={message.id} memberMap={memberMap} />
                 ))}
             </div>
             <div className="flex flex-col-reverse">
                 {historyMessages.map(message => (
-                    <ChatMessage {...message} key={message.id} />
+                    <ChatMessage message={message} key={message.id} memberMap={memberMap} />
                 ))}
             </div>
         </InfiniteScroll>

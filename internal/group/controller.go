@@ -205,12 +205,14 @@ func handleGetMembers(g *GroupService, w http.ResponseWriter, r *http.Request) {
 		helpers.RespondWithAppError(w, appErr)
 		return
 	}
-	mems := make([]MemberResponse, len(members))
+	mems := make([]MemberResponseWithName, len(members))
 	for i, member := range members {
-		mems[i] = MemberResponse{
+		mems[i] = MemberResponseWithName{
 			UsrId:    ulid.ULID(member.UsrID).String(),
 			JoinedAt: member.JoinedAt.Time,
 			Role:     member.Role,
+			Name:     member.Name,
+			Username: member.Username,
 		}
 	}
 	helpers.RespondWithJSON(w, 200, map[string]any{"members": mems})

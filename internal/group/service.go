@@ -173,7 +173,7 @@ func (g *GroupService) AddMemberToGroup(ctx context.Context, groupId, userId uli
 	return nil
 }
 
-func (g *GroupService) GetMembers(ctx context.Context, groupId, userId ulid.ULID) ([]*db.GrpMembership, *errs.Error) {
+func (g *GroupService) GetMembers(ctx context.Context, groupId, userId ulid.ULID) ([]*db.GetGroupMembersWithNameRow, *errs.Error) {
 	ctx, cancel := context.WithTimeout(ctx, g.Db.QueryTimeout)
 	defer cancel()
 
@@ -181,7 +181,7 @@ func (g *GroupService) GetMembers(ctx context.Context, groupId, userId ulid.ULID
 	if appErr != nil {
 		return nil, appErr
 	}
-	members, err := g.Db.Queries.GetGroupMemberships(ctx, groupId[:])
+	members, err := g.Db.Queries.GetGroupMembersWithName(ctx, groupId[:])
 	if err != nil {
 		slog.ErrorContext(ctx, "internal error while fetching members of the group", "error", err)
 		return nil, errs.Internal("internal server error while fetching members")

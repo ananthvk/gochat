@@ -35,6 +35,14 @@ WHERE
 grp_id = sqlc.arg('grp_id')
 ;
 
+-- name: GetGroupMembersWithName :many
+SELECT m.*, u.username, u.name FROM 
+grp_membership AS m 
+INNER JOIN usr AS u
+ON m.usr_id = u.id
+WHERE grp_id = sqlc.arg('grp_id')
+;
+
 
 -- Get all groups the user is a part of
 
