@@ -98,17 +98,17 @@ func (m *MessageService) Delete(ctx context.Context, messageId, groupId, userId 
 	return nil
 }
 
-func (m *MessageService) Create(ctx context.Context, messageType string, content string, groupId, userId ulid.ULID) (ulid.ULID, *errs.Error) {
+func (m *MessageService) Create(ctx context.Context, messageType string, content string, groupId, userId ulid.ULID) (*db.Message, *errs.Error) {
 	ctx, cancel := context.WithTimeout(ctx, m.Db.QueryTimeout)
 	defer cancel()
 	id := ulid.Make()
 
 	appErr := membership.IsUserMemberOfGroup(m.Db, ctx, groupId, userId)
 	if appErr != nil {
-		return ulid.ULID{}, appErr
+		return nil, appErr
 	}
 
-	_, err := m.Db.Queries.CreateMessage(ctx, db.CreateMessageParams{
+	message, err := m.Db.Queries.CreateMessage(ctx, db.CreateMessageParams{
 		Type:     messageType,
 		Content:  content,
 		ID:       id[:],
@@ -117,7 +117,7 @@ func (m *MessageService) Create(ctx context.Context, messageType string, content
 	})
 	if err != nil {
 		slog.ErrorContext(ctx, "internal error while creating message", "error", err)
-		return id, errs.Internal("internal server error while creating message")
+		return nil, errs.Internal("internal server error while creating message")
 	}
-	return id, nil
+	return message, nil
 }

@@ -26,4 +26,4 @@ WHERE
 -- name: CreateMessage :one
 INSERT INTO message (id, type, grp_id, content, sender_id)
 VALUES (sqlc.arg('id'), sqlc.arg('type'), sqlc.arg('grp_id'), sqlc.arg('content'), sqlc.arg('sender_id'))
-RETURNING id;
+RETURNING *;

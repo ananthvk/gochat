@@ -46,3 +46,29 @@ export const getMessages = async (pagination: PaginationParams): Promise<Message
         }
     }
 }
+
+type MessageType = 'text'
+
+export const createMessage = async ({ groupId, messageType, content }: { groupId: string, messageType: MessageType, content: string }): Promise<Message> => {
+    try {
+        const response = await axiosClient.post(`/group/${groupId}/message`, {
+            type: messageType,
+            content: content
+        })
+        return response.data
+    } catch (error: any) {
+        if (!error.response) {
+            throw {
+                success: false,
+                error: 'Network error',
+                errorDetails: {}
+            } satisfies APIError
+        }
+        const errorData = error.response.data
+        throw {
+            success: false,
+            error: String(errorData.reason) || String(errorData.error),
+            errorDetails: errorData
+        }
+    }
+}

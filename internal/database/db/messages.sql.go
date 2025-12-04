@@ -12,7 +12,7 @@ import (
 const createMessage = `-- name: CreateMessage :one
 INSERT INTO message (id, type, grp_id, content, sender_id)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id
+RETURNING id, type, grp_id, created_at, content, sender_id
 `
 
 type CreateMessageParams struct {
@@ -23,7 +23,7 @@ type CreateMessageParams struct {
 	SenderID []byte `json:"sender_id"`
 }
 
-func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) ([]byte, error) {
+func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) (*Message, error) {
 	row := q.db.QueryRow(ctx, createMessage,
 		arg.ID,
 		arg.Type,
@@ -31,9 +31,16 @@ func (q *Queries) CreateMessage(ctx context.Context, arg CreateMessageParams) ([
 		arg.Content,
 		arg.SenderID,
 	)
-	var id []byte
-	err := row.Scan(&id)
-	return id, err
+	var i Message
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.GrpID,
+		&i.CreatedAt,
+		&i.Content,
+		&i.SenderID,
+	)
+	return &i, err
 }
 
 const deleteMessage = `-- name: DeleteMessage :exec

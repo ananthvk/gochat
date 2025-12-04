@@ -4,7 +4,6 @@ import { useChatStore } from './store'
 import { LoginPage } from './components/LoginPage'
 import { useAuthBootstrap } from './hooks/user'
 import { Loader } from './components/Loader'
-import { queryClient } from '../api/query-client'
 function App() {
     useAuthBootstrap();
     const isLoggedIn = useChatStore((state) => state.isLoggedIn)
@@ -20,7 +19,6 @@ function App() {
     if (isLoggedIn) {
         return <ChatApp />
     } else {
-        queryClient.clear()
         return <LoginPage />
     }
 

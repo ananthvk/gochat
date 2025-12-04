@@ -1,15 +1,11 @@
 import { faGear, faUser } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useChatStore } from "../store";
-import { logOut } from "../../api/auth";
+import { useLogout } from "../hooks/user";
 
 export function SidebarHeader() {
+    const logout = useLogout();
     const isLoggedIn = useChatStore((state) => state.isLoggedIn)
-    const setIsLoggedIn = useChatStore((state) => state.setIsLoggedIn)
-    const logout = () => {
-        logOut().catch(err => console.log(err))
-        setIsLoggedIn(false)
-    }
     return <div className="p-5 flex flex-row items-center justify-between  bg-linear-to-r from-blue-50 to-gray-50">
         <div>
             <button className="text-white p-3 rounded-full items-start bg-gray-400 mr-3">

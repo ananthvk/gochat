@@ -1,8 +1,9 @@
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { loginUser, type LoginDetails, type LoginResult, getMe, type MeResult } from "../../api/auth"
 import { type APIError } from '../../api/errors'
 import { useChatStore } from "../store"
 import { useEffect } from "react"
+import { queryClient } from "../../api/query-client"
 
 export const useLogin = () => {
     const mutation = useMutation<LoginResult, unknown, LoginDetails>({
@@ -42,7 +43,9 @@ export const useAuthBootstrap = () => {
                 setLoggedIn(false)
                 setCurrentUserId("")
                 localStorage.removeItem("session_token")
+                queryClient.clear();
             }
+            setCurrentUserId("")
             setLoading(false)
         }
     }, [query.isError])
@@ -56,3 +59,18 @@ export const useAuthBootstrap = () => {
     }, [])
     return query
 }
+
+export const useLogout = () => {
+    const queryClient = useQueryClient();
+    const setLoggedIn = useChatStore((state) => state.setIsLoggedIn);
+    const setCurrentUserId = useChatStore((state) => state.setCurrentUserId);
+
+    const logout = () => {
+        localStorage.removeItem("session_token");
+        setLoggedIn(false);
+        setCurrentUserId("");
+        queryClient.clear();
+    };
+
+    return logout;
+};

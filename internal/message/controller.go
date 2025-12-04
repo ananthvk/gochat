@@ -85,12 +85,19 @@ func handleCreateMessage(m *MessageService, w http.ResponseWriter, r *http.Reque
 		helpers.RespondWithError(w, http.StatusUnprocessableEntity, errs.ErrValidationFailed, fmt.Sprintf("%s", errors))
 		return
 	}
-	id, appErr := m.Create(r.Context(), message.Type, message.Content, groupId, userId)
+	msg, appErr := m.Create(r.Context(), message.Type, message.Content, groupId, userId)
 	if appErr != nil {
 		helpers.RespondWithAppError(w, appErr)
 		return
 	}
-	helpers.RespondWithJSON(w, http.StatusCreated, map[string]any{"id": id.String()})
+	helpers.RespondWithJSON(w, http.StatusCreated, MessageResponse{
+		Id:        ulid.ULID(msg.ID).String(),
+		CreatedAt: msg.CreatedAt.Time,
+		Type:      msg.Type,
+		Content:   msg.Content,
+		GrpId:     ulid.ULID(msg.GrpID).String(),
+		SenderId:  ulid.ULID(msg.SenderID).String(),
+	})
 }
 
 func handleGetMessages(m *MessageService, w http.ResponseWriter, r *http.Request) {
