@@ -16,6 +16,7 @@ export const useAuthBootstrap = () => {
     const token = localStorage.getItem("session_token")
     const setLoggedIn = useChatStore(state => state.setIsLoggedIn)
     const setLoading = useChatStore(state => state.setAuthLoading)
+    const setCurrentUserId = useChatStore(state => state.setCurrentUserId)
     const query = useQuery<MeResult, APIError, MeResult>({
         queryKey: ["auth", "me"],
         queryFn: getMe,
@@ -28,6 +29,7 @@ export const useAuthBootstrap = () => {
         if (query.isSuccess) {
             // The token is valid
             setLoggedIn(true)
+            setCurrentUserId(query.data.user ? query.data.user.id : "")
             setLoading(false)
         }
     }, [query.isSuccess])
@@ -38,6 +40,7 @@ export const useAuthBootstrap = () => {
             // Otherwise the token may get removed due to network errors
             if (query.error.errorDetails && query.error.errorDetails.error == "not_authenticated") {
                 setLoggedIn(false)
+                setCurrentUserId("")
                 localStorage.removeItem("session_token")
             }
             setLoading(false)
@@ -47,6 +50,7 @@ export const useAuthBootstrap = () => {
     useEffect(() => {
         if (!token) {
             setLoggedIn(false)
+            setCurrentUserId("")
             setLoading(false)
         }
     }, [])
