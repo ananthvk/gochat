@@ -1,7 +1,7 @@
 import { useChatStore } from "../store"
 import { getMessages, type Message, type PaginationParams } from "../../api/message"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faExclamationTriangle, faHourglass } from "@fortawesome/free-solid-svg-icons";
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { formatChatTime } from "../lib/formatChatTime";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -28,6 +28,10 @@ function ChatMessage(message: Message) {
         senderIsCurrentUser = true
     }
 
+    // If the status is not present (i.e. it's from the server, it's sent)
+    const isSent = (!message.status) || message.status === "sent"
+    const isError = message.status === "error"
+
     // TODO: Later map message sender id to username
     return <div className={`p-3 ${senderIsCurrentUser ? "bg-green-100 self-end" : "bg-slate-100"} mb-2 rounded-lg w-fit lg:max-w-6/12 md:max-w-8/12 sm:max-w-10/12 max-w-11/12 shadow-sm`}>
         {senderIsCurrentUser ? <></> :
@@ -42,7 +46,13 @@ function ChatMessage(message: Message) {
             <p className="mr-2">
                 {formatChatTime(message.created_at)}
             </p>
-            {senderIsCurrentUser ? <FontAwesomeIcon icon={faCheck} fontSize={"0.8em"} /> : <></>}
+            {senderIsCurrentUser && (
+                <FontAwesomeIcon
+                    icon={isError ? faExclamationTriangle : (isSent ? faCheck : faHourglass)}
+                    fontSize={"0.8em"}
+                    className={isError ? "text-red-500" : ""}
+                />
+            )}
         </div>
     </div>
 }

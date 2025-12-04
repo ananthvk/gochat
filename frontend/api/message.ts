@@ -9,6 +9,7 @@ export interface Message {
     id: string
     sender_id: string
     type: string
+    status?: string
 }
 
 export type MessageCursor = {

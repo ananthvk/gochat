@@ -21,20 +21,42 @@ export function ChatWindow() {
         // Don't send if the message is made of only spaces or is empty
         if (currentMessage.trim().length == 0)
             return
+        const tempMessageId = `local-${selectedGroupId}-${liveMessageCounter}`
         setLiveMessages(prev => [...prev, {
             content: currentMessage,
             group_id: selectedGroupId,
             type: "text",
             created_at: (new Date()).toISOString(),
-            id: `local-${liveMessageCounter}`,
-            sender_id: currentUserId
+            id: tempMessageId,
+            sender_id: currentUserId,
+            status: "pending"
         }])
         setLiveMessageCounter(prev => prev + 1)
         setCurrentMessage("")
         // Optimistic send
         // TODO: Inform the user if it fails
         console.log("Sending message")
-        createMessage.mutate({ groupId: selectedGroupId, content: currentMessage, messageType: "text" })
+        createMessage.mutate({ groupId: selectedGroupId, content: currentMessage, messageType: "text" },
+            {
+                onSuccess: (data) => {
+                    // TODO: Inefficient, use record type to modify message params quickly
+                    setLiveMessages(prev => prev.map(msg => {
+                        if (msg.id === tempMessageId) {
+                            return { ...msg, status: "sent", id: data.id, created_at: data.created_at }
+                        }
+                        return msg
+                    }))
+                },
+                onError: () => {
+                    setLiveMessages(prev => prev.map(msg => {
+                        if (msg.id === tempMessageId) {
+                            return { ...msg, status: "error" }
+                        }
+                        return msg
+                    }))
+                }
+            }
+        )
     }
     // If no group is selected, display a blank screen
     if (selectedGroupId === "") {
