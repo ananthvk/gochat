@@ -3,11 +3,9 @@ package realtime
 import (
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/ananthvk/gochat/internal/helpers"
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -19,72 +17,7 @@ var upgrader = websocket.Upgrader{
 func Routes(rt *RealtimeService) chi.Router {
 	realtimeRouter := chi.NewRouter()
 	realtimeRouter.Get("/ws", func(w http.ResponseWriter, r *http.Request) { handlerCreateWSConnection(rt, w, r) })
-	realtimeRouter.Post("/room", func(w http.ResponseWriter, r *http.Request) { handleCreateRoom(rt, w, r) })
-	realtimeRouter.Post("/room/join", func(w http.ResponseWriter, r *http.Request) { handleJoinRoom(rt, w, r) })
-	realtimeRouter.Get("/room/by-name/{name}", func(w http.ResponseWriter, r *http.Request) { handleGetRoomByName(rt, w, r) })
-	realtimeRouter.Get("/room", func(w http.ResponseWriter, r *http.Request) { handleGetRooms(rt, w, r) })
 	return realtimeRouter
-}
-
-// handleGetRooms returns all the rooms available on the server
-func handleGetRooms(rt *RealtimeService, w http.ResponseWriter, _ *http.Request) {
-	rooms := rt.ListRooms()
-	helpers.RespondWithJSON(w, http.StatusOK, rooms)
-}
-
-// handleGetRoomByName returns the room associated with a room name. For now,
-// rooms are uniquely identifiable by their room name.
-func handleGetRoomByName(rt *RealtimeService, w http.ResponseWriter, r *http.Request) {
-	name := chi.URLParam(r, "name")
-	if strings.TrimSpace(name) == "" {
-		helpers.RespondWithError(w, http.StatusBadRequest, "url parameter missing", "required URL parameter 'name' not provided")
-		return
-	}
-
-	room := rt.GetRoomByName(name)
-	if room == nil {
-		helpers.RespondWithError(w, http.StatusNotFound, "room not found", "room with given name not found")
-		return
-	}
-	helpers.RespondWithJSON(w, http.StatusOK, room)
-}
-
-// handleCreateRoom creates a new room and returns the ID of the room to the client
-func handleCreateRoom(rt *RealtimeService, w http.ResponseWriter, r *http.Request) {
-	createRoomRequest := struct {
-		Name string `json:"name"`
-	}{}
-	err := helpers.ReadJSONBody(r, &createRoomRequest)
-	if err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "post body malformed", err.Error())
-		return
-	}
-	room := rt.CreateRoom(createRoomRequest.Name)
-	helpers.RespondWithJSON(w, http.StatusCreated, room)
-}
-
-func handleJoinRoom(rt *RealtimeService, w http.ResponseWriter, r *http.Request) {
-	joinRoomRequest := struct {
-		ClientId *uuid.UUID `json:"client_id"`
-		RoomId   *uuid.UUID `json:"room_id"`
-	}{}
-
-	if err := helpers.ParseJSON(r.Body, &joinRoomRequest, false); err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "post body malformed", err.Error())
-		return
-	}
-
-	if joinRoomRequest.ClientId == nil || joinRoomRequest.RoomId == nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "missing id", "either client_id or room_id is missing")
-		return
-	}
-
-	if err := rt.JoinRoom(*joinRoomRequest.ClientId, *joinRoomRequest.RoomId); err != nil {
-		helpers.RespondWithError(w, http.StatusBadRequest, "join failed", err.Error())
-		return
-	}
-
-	helpers.RespondWithJSON(w, http.StatusOK, map[string]string{"status": "joined"})
 }
 
 func handlerCreateWSConnection(rt *RealtimeService, w http.ResponseWriter, r *http.Request) {

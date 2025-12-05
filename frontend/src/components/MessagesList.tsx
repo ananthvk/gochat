@@ -3,7 +3,6 @@ import { getMessages, type Message, type PaginationParams } from "../../api/mess
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faExclamationTriangle, faHourglass } from "@fortawesome/free-solid-svg-icons";
 import InfiniteScroll from 'react-infinite-scroll-component';
-import { formatChatTime } from "../lib/formatChatTime";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Loader } from "./Loader";
 import { SystemMessage } from "./SystemMessage";
@@ -54,7 +53,7 @@ function ChatMessage({ message, memberMap }: { message: Message, memberMap?: Rec
         </p>
         <div className="flex flex-row items-center justify-end font-light text-gray-500 text-sm">
             <p className="mr-2">
-                {formatChatTime(message.created_at)}
+                {new Date(message.created_at).toLocaleDateString()}
             </p>
             {senderIsCurrentUser && (
                 <FontAwesomeIcon
@@ -67,7 +66,7 @@ function ChatMessage({ message, memberMap }: { message: Message, memberMap?: Rec
     </div>
 }
 
-export function MessagesList({ liveMessages }: { liveMessages: Message[] }) {
+export function MessagesList({ liveMessages, forceScrollToEnd }: { liveMessages: Message[], forceScrollToEnd: boolean }) {
     // Temporary workaround flex-col-reverse, later make the div scroll to the end
     const scrollRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
@@ -80,13 +79,13 @@ export function MessagesList({ liveMessages }: { liveMessages: Message[] }) {
         const isNearBottom =
             messagesDiv.scrollTop + messagesDiv.clientHeight >= messagesDiv.scrollHeight - SCROLL_MESSAGES_DISTANCE;
 
-        if (isNearBottom) {
+        if (isNearBottom || forceScrollToEnd) {
             messagesDiv.scrollTo({
                 top: messagesDiv.scrollHeight,
                 behavior: 'smooth'
             });
         }
-    }, [liveMessages]);
+    }, [liveMessages, forceScrollToEnd]);
     return <div id="chatMessages" className="flex-1 p-5 overflow-y-scroll flex flex-col-reverse" ref={scrollRef}>
         <InfiniteList liveMessages={liveMessages} />
     </div>

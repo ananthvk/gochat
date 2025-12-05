@@ -9,21 +9,18 @@ import { useCreateMessage } from "../hooks/message";
 export function ChatWindow() {
     const selectedGroupId = useChatStore((state) => state.selectedGroupId)
     const currentUserId = useChatStore((state) => state.currentUserId)
-    const [currentMessage, setCurrentMessage] = useState("")
     const [liveMessages, setLiveMessages] = useState<Message[]>([])
     const [liveMessageCounter, setLiveMessageCounter] = useState(0)
     const createMessage = useCreateMessage()
+    const [forceScrollToEnd, setForceScrollToEnd] = useState(false)
     useEffect(() => {
         setLiveMessages([])
     }, [selectedGroupId])
 
-    const onSendCurrentMessage = () => {
-        // Don't send if the message is made of only spaces or is empty
-        if (currentMessage.trim().length == 0)
-            return
+    const onSendCurrentMessage = (message: string) => {
         const tempMessageId = `local-${selectedGroupId}-${liveMessageCounter}`
         setLiveMessages(prev => [...prev, {
-            content: currentMessage,
+            content: message,
             group_id: selectedGroupId,
             type: "text",
             created_at: (new Date()).toISOString(),
@@ -32,11 +29,11 @@ export function ChatWindow() {
             status: "pending"
         }])
         setLiveMessageCounter(prev => prev + 1)
-        setCurrentMessage("")
+
         // Optimistic send
-        // TODO: Inform the user if it fails
         console.log("Sending message")
-        createMessage.mutate({ groupId: selectedGroupId, content: currentMessage, messageType: "text" },
+        setForceScrollToEnd(true)
+        createMessage.mutate({ groupId: selectedGroupId, content: message, messageType: "text" },
             {
                 onSuccess: (data) => {
                     // TODO: Inefficient, use record type to modify message params quickly
@@ -46,6 +43,7 @@ export function ChatWindow() {
                         }
                         return msg
                     }))
+                    setForceScrollToEnd(false)
                 },
                 onError: () => {
                     setLiveMessages(prev => prev.map(msg => {
@@ -54,6 +52,7 @@ export function ChatWindow() {
                         }
                         return msg
                     }))
+                    setForceScrollToEnd(false)
                 }
             }
         )
@@ -68,7 +67,7 @@ export function ChatWindow() {
     }
     return <div className="col-span-8 md:col-span-7 flex flex-col h-screen">
         <Header />
-        <MessagesList liveMessages={liveMessages} />
-        <MessageInput message={currentMessage} onMessageChange={(e) => setCurrentMessage(e.target.value)} onSubmit={onSendCurrentMessage} />
+        <MessagesList liveMessages={liveMessages} forceScrollToEnd={forceScrollToEnd} />
+        <MessageInput onSubmit={onSendCurrentMessage} />
     </div>
 }
