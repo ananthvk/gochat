@@ -83,7 +83,6 @@ func main() {
 		os.Exit(1)
 	}
 	app.StartTime = startTime
-	app.RealtimeService.StartHubEventLoop()
 	defer app.DatabaseService.Pool.Close()
 
 	middleware := mid.Middlewares{

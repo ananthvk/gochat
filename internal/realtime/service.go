@@ -2,68 +2,49 @@ package realtime
 
 import (
 	"context"
-	"log/slog"
 
-	"github.com/google/uuid"
+	"github.com/ananthvk/gochat/internal/database"
+	"github.com/gorilla/websocket"
+	"github.com/oklog/ulid/v2"
 )
 
-type room struct {
-	Id   uuid.UUID `json:"id"`
-	Name string    `json:"name"`
-}
-
 type RealtimeService struct {
-	rooms map[string]*room
-	hub   *hub
-	ctx   context.Context
+	clientHub *hub
+	Db        *database.DatabaseService
 }
 
-func NewRealtimeService(ctx context.Context) *RealtimeService {
-	rtService := &RealtimeService{
-		rooms: map[string]*room{},
-		hub:   newHub(),
-		ctx:   ctx,
+func NewRealtimeService(ctx context.Context, db *database.DatabaseService) *RealtimeService {
+	hub := newHub()
+	go hub.RunEventLoop(ctx)
+	return &RealtimeService{
+		clientHub: hub,
+		Db:        db,
 	}
-	slog.Info("created realtime service")
-	return rtService
 }
 
-// CreateRoom creates a new room, and returns it. If a room with the same name already exists, it returns
-// the existing room.
-func (r *RealtimeService) CreateRoom(name string) *room {
-	existingRoom, ok := r.rooms[name]
-	if !ok {
-		room := &room{Id: uuid.New(), Name: name}
-		r.rooms[name] = room
-		r.hub.control <- hubRoomCreated{roomId: room.Id}
-		return room
-	}
-	return existingRoom
+// RegisterConnection registers a new websocket connection and returns a connection id
+func (r *RealtimeService) RegisterConnection(conn *websocket.Conn, userId ulid.ULID) ulid.ULID {
+	clientId := ulid.Make()
+	r.clientHub.control <- registerClientEvent{conn: conn, userId: userId, clientId: clientId}
+	return clientId
 }
 
-func (r *RealtimeService) JoinRoom(clientId, roomId uuid.UUID) error {
-	// TODO: Add error handling, pass a channel so that the hub can signal errors back
-	r.hub.control <- hubRoomJoined{roomId: roomId, ClientId: clientId}
-	return nil
+func (r *RealtimeService) UnregisterConnection(clientId ulid.ULID) {
+	r.clientHub.control <- unregisterClientEvent{clientId: clientId}
 }
 
-// ListRooms returns a list of all the rooms on this server. If there are no rooms, an empty slice is returned
-func (r *RealtimeService) ListRooms() []*room {
-	rooms := make([]*room, 0, len(r.rooms))
-	for _, room := range r.rooms {
-		rooms = append(rooms, room)
-	}
-	return rooms
+// AddConnectionToRooms creates the rooms from the specified list, if it exists, it's not created again, then the client is added to all those rooms
+func (r *RealtimeService) AddConnectionToRooms(roomIds []ulid.ULID, clientId ulid.ULID) {
+	r.clientHub.control <- createRoomsAndAddClientEvent{clientId: clientId, roomIds: roomIds}
 }
 
-// GetRoomByName returns the room with the given name. Note: In the current implementation, rooms have unique names.
-// If the room with the given name is not found, nil is returned
-func (r *RealtimeService) GetRoomByName(name string) *room {
-	room := r.rooms[name]
-	return room
+func (r *RealtimeService) RemoveConnectionFromRoom(connectionId ulid.ULID, roomId ulid.ULID) {
+	// TOOD: Implement this
+	// Only needed when a user is removed from a group
 }
 
-// StartHubEventLoop starts the event loop of the hub in a separate goroutine
-func (r *RealtimeService) StartHubEventLoop() {
-	go r.hub.RunEventLoop(r.ctx)
+func (r *RealtimeService) Broadcast(roomId ulid.ULID, message []byte) {
+	r.clientHub.events <- broadcastEvent{targetRoom: roomId, payload: message}
 }
+
+// Other methods that are necesssary - A method to remove all connections associated with a client (incase of logout)

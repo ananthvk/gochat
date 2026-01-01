@@ -77,8 +77,8 @@ func newTestServerWithDatabase(t *testing.T, ctx context.Context) (*app.App, *ch
 		DbQueryTimeout:            5 * time.Second,
 	}
 
-	rtService := realtime.NewRealtimeService(ctx)
 	dbService, err := database.NewDatabaseService(ctx, cfg)
+	rtService := realtime.NewRealtimeService(ctx, dbService)
 	if err != nil {
 		log.Fatalf("could not create database service %s", err)
 	}
@@ -104,7 +104,6 @@ func newTestServerWithDatabase(t *testing.T, ctx context.Context) (*app.App, *ch
 		TokenService:    tokenService,
 		Config:          cfg,
 	}
-	app.RealtimeService.StartHubEventLoop()
 	middlewares := middleware.Middlewares{
 		Authenticate: auth.AuthMiddleware(tokenService),
 	}

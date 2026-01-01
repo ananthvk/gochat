@@ -9,6 +9,7 @@ import { SystemMessage } from "./SystemMessage";
 import { useEffect, useRef } from "react";
 import type { GroupMember } from "../../api/group";
 import { useGroupMembers } from "../hooks/group";
+import { queryClient } from "../../api/query-client";
 
 const defaultMessageFetchLimit = 20;
 
@@ -53,7 +54,12 @@ function ChatMessage({ message, memberMap }: { message: Message, memberMap?: Rec
         </p>
         <div className="flex flex-row items-center justify-end font-light text-gray-500 text-sm">
             <p className="mr-2">
-                {new Date(message.created_at).toLocaleDateString()}
+                {new Date(message.created_at).toLocaleString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}
             </p>
             {senderIsCurrentUser && (
                 <FontAwesomeIcon
@@ -110,8 +116,18 @@ function InfiniteList({ liveMessages }: { liveMessages: Message[] }) {
         refetchOnWindowFocus: false,
         refetchOnMount: false,
         refetchOnReconnect: false,
-        enabled: selectedGroupId != ""
+        enabled: selectedGroupId != "",
     })
+    useEffect(() => {
+        return () => {
+            if (!data)
+                return
+            queryClient.setQueryData(['groups', selectedGroupId, "messages"], (data: any) => ({
+                pages: data.pages.slice(0, 1),
+                pageParams: data.pageParams.slice(0, 1),
+            }))
+        }
+    }, [selectedGroupId])
     const historyMessages = data ? data.pages.flatMap(p => p.messages) : []
 
     if (status === 'pending') {

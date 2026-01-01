@@ -15,7 +15,7 @@ import (
 
 func Routes(app *app.App, middlewares middleware.Middlewares) chi.Router {
 	router := chi.NewRouter()
-	router.Mount("/realtime", realtime.Routes(app.RealtimeService))
+	router.Mount("/realtime", realtime.Routes(app.RealtimeService, middlewares))
 	router.Mount("/auth", auth.Routes(app.AuthService, middlewares))
 	router.Mount("/group", group.Routes(app.GroupService, app.MessageService, middlewares))
 	router.Get("/health", func(w http.ResponseWriter, r *http.Request) { health.HealthCheckHandler(app, w, r) })
