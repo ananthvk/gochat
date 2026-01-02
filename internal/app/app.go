@@ -35,8 +35,8 @@ func NewApp(ctx context.Context, cfg *config.Config, version string) (*App, erro
 	tokenService := token.NewTokenService(dbService)
 	authService := auth.NewAuthService(dbService, tokenService)
 	groupService := group.NewGroupService(dbService)
-	messageService := message.NewMessageService(dbService)
 	realtimeService := realtime.NewRealtimeService(ctx, dbService)
+	messageService := message.NewMessageService(dbService, realtimeService)
 
 	app := &App{
 		Ctx:             ctx,

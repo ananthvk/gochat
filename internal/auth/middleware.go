@@ -61,6 +61,36 @@ func AuthMiddleware(tokenService *token.TokenService) func(http.Handler) http.Ha
 	}
 }
 
+// AuthQueryTokenMiddleware is a factory that creates an auth middleware by wrapping the token service through a closure. It extracts
+// a token from a 'token' query parameter. This is to be used in websockets, since the JS api does not support Authorization header for WS
+func AuthQueryTokenMiddleware(tokenService *token.TokenService) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authToken := r.URL.Query().Get("token")
+			if authToken == "" {
+				helpers.RespondWithAppError(w, errs.NotAuthenticated("token query string not present"))
+				return
+			}
+			userId, appErr := tokenService.Verify(r.Context(), token.ScopeAuthenticate, authToken)
+			if appErr != nil {
+				appErr.Kind = errs.ErrNotAuthenticated
+				appErr.Status = http.StatusUnauthorized
+				helpers.RespondWithAppError(w, appErr)
+				return
+			}
+
+			if userId == (ulid.ULID{}) {
+				helpers.RespondWithAppError(w, errs.NotAuthenticated("invalid or expired authentication token"))
+				return
+			}
+
+			ctx := StoreUserIdInContext(r.Context(), userId)
+			ctx = StorePlaintextTokenInContext(ctx, authToken)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
+
 func UserIdFromContext(ctx context.Context) (ulid.ULID, bool) {
 	u, ok := ctx.Value(ctxKeyUser{}).(ulid.ULID)
 	return u, ok

@@ -169,5 +169,5 @@ func (h *hub) processCreateRoomAndJoinEvent(e createRoomsAndAddClientEvent) {
 		}
 		room[e.clientId] = struct{}{}
 	}
-	slog.Info("processed createRoomsAndAddClientEvent", "rooms", e.roomIds, "client", e.clientId)
+	slog.Info("processed createRoomsAndAddClientEvent", "client", e.clientId)
 }

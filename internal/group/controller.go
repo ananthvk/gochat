@@ -154,14 +154,27 @@ func handleGetAllGroups(g *GroupService, w http.ResponseWriter, r *http.Request)
 		helpers.RespondWithAppError(w, err)
 		return
 	}
-	groups := make([]GroupResponse, len(grps))
+	groups := make([]GroupListResponse, len(grps))
 	for i, grp := range grps {
-		groups[i] = GroupResponse{
+		var lastMessage *GroupListMessageResponse
+		if grp.LastMessageID != nil {
+			lastMessage = &GroupListMessageResponse{
+				Id:         ulid.ULID(grp.LastMessageID).String(),
+				CreatedAt:  grp.LastMessageCreatedAt.Time,
+				Type:       grp.LastMessageType.String,
+				GrpId:      ulid.ULID(grp.ID).String(),
+				Content:    grp.LastMessageContent.String,
+				SenderId:   ulid.ULID(grp.LastMessageSenderID).String(),
+				SenderName: grp.LastMessageSenderName.String,
+			}
+		}
+		groups[i] = GroupListResponse{
 			Id:          ulid.ULID(grp.ID).String(),
 			CreatedAt:   grp.CreatedAt.Time,
 			Name:        grp.Name,
 			Description: grp.Description,
 			OwnerId:     ulid.ULID(grp.OwnerID).String(),
+			LastMessage: lastMessage,
 		}
 	}
 	helpers.RespondWithJSON(w, 200, map[string]any{"groups": groups})

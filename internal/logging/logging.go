@@ -85,6 +85,10 @@ func createRequestLoggerMiddleware(logger *slog.Logger, logFormat *httplog.Schem
 				if strings.Contains(req.URL.String(), "signup") {
 					return nil
 				}
+				// WS connection endpoint exposes the auth token in the 'token' query parameter
+				if strings.Contains(req.URL.String(), "/realtime/ws") {
+					return nil
+				}
 				return []slog.Attr{slog.String("curl", httplog.CURL(req, reqBody))}
 			}
 			return nil

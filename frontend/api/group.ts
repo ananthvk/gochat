@@ -1,12 +1,24 @@
 import { axiosClient } from './axios'
 
-export interface Group {
+export interface LastMessage {
+    id: string
+    content: string
     created_at: string
-    description: string
+    group_id: string
+    sender_id: string
+    sender_name: string
+    type: string
+}
+
+export interface Group {
     id: string
     name: string
+    description: string
+    created_at: string
     owner_id: string
+    last_message?: LastMessage | null
 }
+
 
 export type GroupResult = {
     groups: Group[]

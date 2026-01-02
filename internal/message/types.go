@@ -1,6 +1,10 @@
 package message
 
-import "time"
+import (
+	"time"
+
+	"github.com/oklog/ulid/v2"
+)
 
 // The content of a message can have atmost 4096 characters
 
@@ -26,4 +30,9 @@ type MessageResponse struct {
 type MessagePaginationResponse struct {
 	Cursor    Cursor          `json:"cursor"`
 	Messsages MessageResponse `json:"messages"`
+}
+
+// MessageEmitter is an interface that emits notifications to connected clients of a group
+type MessageEmitter interface {
+	Broadcast(groupId ulid.ULID, message []byte)
 }

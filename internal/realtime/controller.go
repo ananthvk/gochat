@@ -21,7 +21,7 @@ var upgrader = websocket.Upgrader{
 
 func Routes(rt *RealtimeService, middlewares middleware.Middlewares) chi.Router {
 	realtimeRouter := chi.NewRouter()
-	realtimeRouter.Use(middlewares.Authenticate)
+	realtimeRouter.Use(middlewares.AuthenticateQueryParam)
 	realtimeRouter.Get("/ws", func(w http.ResponseWriter, r *http.Request) { handlerCreateWSConnection(rt, w, r) })
 	return realtimeRouter
 }

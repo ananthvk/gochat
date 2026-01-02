@@ -10,12 +10,14 @@ export const useGroups = () => {
         queryFn: getGroups,
         staleTime: 15 * 1000, // 15 s
         select: (result) => {
-            return result.groups.reduce((acc, g) => {
-                acc[g.id] = g
-                return acc
-            }, {} as Record<string, Group>)
+            const newGroups: Record<string, Group> = {}
+            for (const g of result.groups) {
+                newGroups[g.id] = { ...g }
+            }
+            return newGroups
         },
-        enabled: isLoggedIn
+        enabled: isLoggedIn,
+        structuralSharing: false,
     })
     return query
 }

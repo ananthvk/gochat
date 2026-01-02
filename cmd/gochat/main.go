@@ -86,7 +86,8 @@ func main() {
 	defer app.DatabaseService.Pool.Close()
 
 	middleware := mid.Middlewares{
-		Authenticate: auth.AuthMiddleware(app.TokenService),
+		Authenticate:           auth.AuthMiddleware(app.TokenService),
+		AuthenticateQueryParam: auth.AuthQueryTokenMiddleware(app.TokenService),
 	}
 
 	router.Mount("/api/v1/", internal.Routes(app, middleware))

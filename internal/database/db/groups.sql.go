@@ -79,24 +79,52 @@ const getGroups = `-- name: GetGroups :many
 SELECT 
     g.name, g.description, g.created_at, g.id, g.owner_id,
     mem.role,
-    mem.joined_at 
+    mem.joined_at,
+    m.content AS last_message_content,
+    m.created_at AS last_message_created_at,
+    last_message_id,
+    m.sender_id AS last_message_sender_id,
+    m.type AS last_message_type,
+    u.name AS last_message_sender_name
 FROM grp AS g
 INNER JOIN grp_membership AS mem
     ON g.id = mem.grp_id
+LEFT JOIN (
+    SELECT DISTINCT ON (grp_id)
+        grp_id,
+        id AS last_message_id
+    FROM message
+    ORDER BY grp_id, id DESC
+) AS lm 
+    ON lm.grp_id = g.id
+LEFT JOIN message as m
+    ON m.id = lm.last_message_id
+LEFT JOIN usr AS u
+    ON u.id = m.sender_id
 WHERE mem.usr_id  = $1
+ORDER BY lm.last_message_id DESC NULLS LAST
 `
 
 type GetGroupsRow struct {
-	Name        string             `json:"name"`
-	Description string             `json:"description"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	ID          []byte             `json:"id"`
-	OwnerID     []byte             `json:"owner_id"`
-	Role        string             `json:"role"`
-	JoinedAt    pgtype.Timestamptz `json:"joined_at"`
+	Name                  string             `json:"name"`
+	Description           string             `json:"description"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	ID                    []byte             `json:"id"`
+	OwnerID               []byte             `json:"owner_id"`
+	Role                  string             `json:"role"`
+	JoinedAt              pgtype.Timestamptz `json:"joined_at"`
+	LastMessageContent    pgtype.Text        `json:"last_message_content"`
+	LastMessageCreatedAt  pgtype.Timestamptz `json:"last_message_created_at"`
+	LastMessageID         []byte             `json:"last_message_id"`
+	LastMessageSenderID   []byte             `json:"last_message_sender_id"`
+	LastMessageType       pgtype.Text        `json:"last_message_type"`
+	LastMessageSenderName pgtype.Text        `json:"last_message_sender_name"`
 }
 
 // Returns detailed information about all groups the user is part of
+// Also sorts the returned groups by the last message sent timestamp
+// Also returns the last message (if any) of the group
+// Also joins with the user table, and returns the sender name, so that it can be directly rendered in the sidebar
 func (q *Queries) GetGroups(ctx context.Context, usrID []byte) ([]*GetGroupsRow, error) {
 	rows, err := q.db.Query(ctx, getGroups, usrID)
 	if err != nil {
@@ -114,6 +142,12 @@ func (q *Queries) GetGroups(ctx context.Context, usrID []byte) ([]*GetGroupsRow,
 			&i.OwnerID,
 			&i.Role,
 			&i.JoinedAt,
+			&i.LastMessageContent,
+			&i.LastMessageCreatedAt,
+			&i.LastMessageID,
+			&i.LastMessageSenderID,
+			&i.LastMessageType,
+			&i.LastMessageSenderName,
 		); err != nil {
 			return nil, err
 		}

@@ -3,6 +3,7 @@ package message
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"log/slog"
 
@@ -16,12 +17,14 @@ import (
 const MessageTypeText = "text"
 
 type MessageService struct {
-	Db *database.DatabaseService
+	Db             *database.DatabaseService
+	messageEmitter MessageEmitter
 }
 
-func NewMessageService(databaseService *database.DatabaseService) *MessageService {
+func NewMessageService(databaseService *database.DatabaseService, emitter MessageEmitter) *MessageService {
 	return &MessageService{
-		Db: databaseService,
+		Db:             databaseService,
+		messageEmitter: emitter,
 	}
 }
 
@@ -119,5 +122,27 @@ func (m *MessageService) Create(ctx context.Context, messageType string, content
 		slog.ErrorContext(ctx, "internal error while creating message", "error", err)
 		return nil, errs.Internal("internal server error while creating message")
 	}
+	// Broadcast the message
+
+	type messageBroadcast struct {
+		Type    string `json:"type"`
+		Payload any    `json:"payload"`
+	}
+
+	msg := MessageResponse{
+		Id:        ulid.ULID(message.ID[:]).String(),
+		CreatedAt: message.CreatedAt.Time,
+		Type:      message.Type,
+		Content:   message.Content,
+		GrpId:     ulid.ULID(message.GrpID).String(),
+		SenderId:  ulid.ULID(message.SenderID).String(),
+	}
+
+	data, err := json.Marshal(messageBroadcast{Type: "text_message", Payload: msg})
+	if err != nil {
+		panic("could not marshal json")
+	}
+
+	m.messageEmitter.Broadcast(groupId, data)
 	return message, nil
 }

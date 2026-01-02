@@ -145,6 +145,7 @@ func (g *GroupService) GetAll(ctx context.Context, userId ulid.ULID) ([]*db.GetG
 
 	grps, err := g.Db.Queries.GetGroups(ctx, userId[:])
 	if err != nil {
+		slog.ErrorContext(ctx, "error", "err", err)
 		return nil, errs.Internal("internal server error while fetching groups")
 	}
 	return grps, nil

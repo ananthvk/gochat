@@ -83,7 +83,7 @@ func newTestServerWithDatabase(t *testing.T, ctx context.Context) (*app.App, *ch
 		log.Fatalf("could not create database service %s", err)
 	}
 	groupService := group.NewGroupService(dbService)
-	mesageService := message.NewMessageService(dbService)
+	mesageService := message.NewMessageService(dbService, rtService)
 	tokenService := token.NewTokenService(dbService)
 	authService := auth.NewAuthService(dbService, tokenService)
 
