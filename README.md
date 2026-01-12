@@ -28,6 +28,13 @@ GOCHAT_ENV=development go run ./cmd/gochat
 
 The app will be available at http://localhost:8000
 
+
+You can also run the docker image from docker hub, 
+
+```
+docker run --network host --env-file .env ananthvk0/gochat:0.0.4
+```
+
 ### Development
 
 Frontend:
