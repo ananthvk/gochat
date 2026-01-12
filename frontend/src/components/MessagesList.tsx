@@ -120,7 +120,7 @@ function InfiniteList({ liveMessages }: { liveMessages: Message[] }) {
     })
     useEffect(() => {
         return () => {
-            if (!data)
+            if (!data || !data.pages)
                 return
             queryClient.setQueryData(['groups', selectedGroupId, "messages"], (data: any) => ({
                 pages: data.pages.slice(0, 1),

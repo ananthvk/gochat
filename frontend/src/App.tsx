@@ -18,19 +18,6 @@ function App() {
             closeWS()
         }
     }, [isLoggedIn])
-
-    // Only the root app component handles message demultiplexing
-    useEffect(() => {
-        function handler(e: Event) {
-            const msg = (e as CustomEvent).detail
-            //if (msg.type === "message") {
-            console.log("new message", msg)
-            //}
-        }
-        window.addEventListener("ws-message", handler)
-        return () => window.removeEventListener("ws-message", handler)
-    }, [])
-
     if (authLoading) {
         return <div className="text-center font-semibold p-5 h-screen flex items-center justify-center flex-col">
             <div className="mb-3">

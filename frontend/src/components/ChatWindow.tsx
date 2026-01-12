@@ -17,6 +17,29 @@ export function ChatWindow() {
         setLiveMessages([])
     }, [selectedGroupId])
 
+    useEffect(() => {
+        const handleWSMessage = (e: Event) => {
+            const msg = (e as any).detail
+            // TODO: If the message received was sent by this user, use it as an ack, or for updating chat state when used cross device
+            
+            if (msg.type === "text_message" && msg.payload?.group_id === selectedGroupId) {
+                const payload = msg.payload
+                if(payload.sender_id === currentUserId) {
+                    return
+                }
+                // Check if it already exists, to avoid duplicates
+                setLiveMessages(prev => {
+                    const exists = prev.some(m => m.id === payload.id)
+                    if (exists) return prev
+                    return [...prev, payload]
+                })
+            }
+        }
+
+        window.addEventListener("ws-message", handleWSMessage)
+        return () => window.removeEventListener("ws-message", handleWSMessage)
+    }, [selectedGroupId])
+
     const onSendCurrentMessage = (message: string) => {
         const tempMessageId = `local-${selectedGroupId}-${liveMessageCounter}`
         setLiveMessages(prev => [...prev, {
@@ -59,13 +82,13 @@ export function ChatWindow() {
     }
     // If no group is selected, display a blank screen
     if (selectedGroupId === "") {
-        return <div className="col-span-8 md:col-span-7 flex flex-col items-center justify-center bg-blue-100">
+        return <div className={`col-span-0 md:col-span-7 flex flex-col items-center justify-center bg-blue-100`}>
             <div className="text-xl font-semibold">
                 Select a group to view chats
             </div>
         </div>
     }
-    return <div className="col-span-8 md:col-span-7 flex flex-col h-screen">
+    return <div className={`col-span-0 md:col-span-7 flex flex-col h-screen`}>
         <Header />
         <MessagesList liveMessages={liveMessages} forceScrollToEnd={forceScrollToEnd} />
         <MessageInput onSubmit={onSendCurrentMessage} />

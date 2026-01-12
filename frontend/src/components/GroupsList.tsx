@@ -4,8 +4,9 @@ import { faUser } from "@fortawesome/free-solid-svg-icons"
 import { useGroups } from "../hooks/group"
 import { Loader } from "./Loader"
 import { useEffect } from "react"
-import type { Group } from "../../api/group"
+import type { Group, GroupResult } from "../../api/group"
 import { formatMessageTime } from "../lib/time"
+import { queryClient } from "../../api/query-client"
 
 function Group({ group, selected }: { group: Group, selected: boolean }) {
     const setGroup = useChatStore((state) => state.setSelectedGroupId)
@@ -43,6 +44,47 @@ export function GroupsList() {
             setSelectedGroupId("")
         }
     }, [groups, selectedGroupId, setSelectedGroupId])
+    useEffect(() => {
+        const handleWSMessage = (e: Event) => {
+            const msg = (e as any).detail
+            if (msg.type === "text_message" && msg.payload?.group_id) {
+                queryClient.setQueryData<GroupResult>(
+                    ["groups"],
+                    (old) => {
+                        // TODO: Inefficient, make the api wrapper functions in api/ to return Record instead of lists
+                        if (!old) return old
+                        let oldGroup: any = null
+                        let groups: Group[] = []
+                        if (old.groups.length > 0) {
+                            groups.push(old.groups[0])
+                        }
+                        old.groups.forEach((x) => {
+                            if (x.id !== msg.payload.group_id) {
+                                groups.push(x)
+                            } else {
+                                oldGroup = x
+                            }
+                        })
+                        if (!oldGroup) {
+                            console.log("logic error, group not found in list")
+                            return old
+                        }
+                        // TODO: Fetch the actual sender name
+                        const updatedGroup = { ...oldGroup, last_message: { sender_name: "*New message", ...msg.payload } }
+                        if (old.groups.length > 0) {
+                            groups[0] = updatedGroup
+                        } else {
+                            groups.push(updatedGroup)
+                        }
+                        return { groups: groups }
+                    }
+                )
+            }
+        }
+        window.addEventListener("ws-message", handleWSMessage)
+        return () => window.removeEventListener("ws-message", handleWSMessage)
+    }, [])
+
     if (isLoading) {
         return <div className="flex items-center justify-center flex-col h-screen">
             <Loader />
